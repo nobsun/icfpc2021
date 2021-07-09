@@ -15,6 +15,14 @@ module Lib
 
 import Control.Applicative
 import Data.Aeson
+import qualified Data.ByteString.Lazy as LBS
+
+test001 :: IO ()
+test001 = do
+  maybeValue <- decode <$> LBS.readFile "data/problems/001.json"
+  case (maybeValue :: Maybe Problem) of
+    Just val -> print val
+    Nothing  -> putStrLn "fail to decode."
 
 data Point = Point { x :: Int
                    , y :: Int
