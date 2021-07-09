@@ -133,8 +133,8 @@ main = do
               , stateFBHeight        = fbHeight
               , statePoint           = Nothing
               , stateHole            = [(55, 80), (65, 95), (95, 95), (35, 5), (5, 5), (35, 50), (5, 95), (35, 95), (45, 80)] -- lamda (sample)
-              , stateEdges           = []
-              , stateVertices        = []
+              , stateEdges           = [(2, 5), (5, 4), (4, 1), (1, 0), (0, 8), (8, 3), (3, 7),(7, 11), (11, 13), (13, 12), (12, 18), (18, 19), (19, 14),(14, 15), (15, 17), (17, 16), (16, 10), (10, 6), (6, 2),(8, 12), (7, 9), (9, 3), (8, 9), (9, 12), (13, 9), (9, 11),(4, 8), (12, 14), (5, 10), (10, 15)]
+              , stateVertices        = [(20, 30), (20, 40), (30, 95), (40, 15), (40, 35), (40, 65),(40, 95), (45, 5), (45, 25), (50, 15), (50, 70), (55, 5),(55, 25), (60, 15), (60, 35), (60, 65), (60, 95), (70, 95),(80, 30), (80, 40)]
               , stateEpsilon         = 1
               , stateDislike         = 0
               , stateHistory         = []
@@ -328,13 +328,19 @@ draw :: Demo ()
 draw = do
     env   <- ask
     state <- get
-    liftIO $ GL.clear [GL.ColorBuffer, GL.DepthBuffer]
-    liftIO $ GL.renderPrimitive GL.Polygon $ mapM_ (GL.vertex . toVertex) (stateHole state)
-    liftIO $ GLFW.swapBuffers (envWindow env)
+    liftIO $ do
+      GL.clear [GL.ColorBuffer, GL.DepthBuffer]
+      GL.renderPrimitive GL.Polygon $ mapM_ (GL.vertex . toV) (stateHole state)
+      GL.color (GL.Color3 0.7 0 0 :: GL.Color3 GL.GLfloat)
+      GL.renderPrimitive GL.Lines $ mapM_ GL.vertex (edgeToV (stateVertices state) (stateEdges state))
+      GLFW.swapBuffers (envWindow env)
 
-toVertex :: (Int,Int) -> GL.Vertex2 GL.GLdouble
-toVertex (x,y) = GL.Vertex2 (fromIntegral x) (fromIntegral y)
+toV :: (Int,Int) -> GL.Vertex2 GL.GLdouble
+toV (x,y) = GL.Vertex2 (fromIntegral x) (fromIntegral y)
 
+edgeToV :: [(Int,Int)] -> [(Int,Int)] -> [GL.Vertex2 GL.GLdouble]
+edgeToV vertices edges =
+  concat [[toV (vertices!!e1), toV (vertices!!e2)] | (e1,e2) <- edges]
 
 --------------------------------------------------------------------------------
 
