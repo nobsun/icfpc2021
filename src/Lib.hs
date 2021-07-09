@@ -52,9 +52,7 @@ data Figure = Figure { edges :: [Point]
 
 instance FromJSON Figure where
   parseJSON = withObject "figure" $ \o -> do
-    edges    <- o .: "edges"
-    vertices <- o .: "vertices"
-    return $ Figure edges vertices
+    Figure <$> o .: "edges" <*> o .: "vertices"
 
 instance ToJSON Figure where
   toJSON (Figure es vs)
@@ -66,11 +64,8 @@ data Problem = Problem { hole :: [Point]
                        } deriving Show
 
 instance FromJSON Problem where
-  parseJSON = withObject "prob" $ \o -> do
-    hole <- o .: "hole"
-    figure <- o .: "figure"
-    epsilon <- o .: "epsilon"
-    return $ Problem hole figure epsilon
+  parseJSON = withObject "problem" $ \o -> do
+    Problem <$> o .: "hole" <*> o .: "figure" <*> o .: "epsilon"
 
 instance ToJSON Problem where
   toJSON (Problem h f e) = object [ "hole" .= h, "figure" .= f, "epsilon" .= e ]
@@ -80,8 +75,7 @@ data Pose = Pose { vertices :: [Point] } deriving Show
 
 instance FromJSON Pose where
   parseJSON = withObject "pose" $ \o -> do
-    vertices <- o .: "vertices"
-    return $ Pose vertices
+    Pose <$> o .: "vertices"
 
 instance ToJSON Pose where
   toJSON (Pose vs) = object [ "vertices" .= vs ]
