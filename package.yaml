@@ -22,13 +22,8 @@ description:         Please see the README on GitHub at <https://github.com/nobs
 dependencies:
 - base >= 4.7 && < 5
 - unicode-show
-- markdown-unlit
-- doctest
 - bytestring
 - utf8-string
-- hspec
-- hpack
-- main-tester
 
 library:
   source-dirs: src
@@ -97,6 +92,7 @@ tests:
     dependencies:
     - icfpc2021
     - hspec
+    - main-tester
 
   icfpc2021-doctest:
     main:                doctests.hs
@@ -107,3 +103,4 @@ tests:
     # - -with-rtsopts=-N
     dependencies:
     - icfpc2021
+    - doctest

@@ -43,11 +43,6 @@ library
   build-depends:
       base >=4.7 && <5
     , bytestring
-    , doctest
-    , hpack
-    , hspec
-    , main-tester
-    , markdown-unlit
     , unicode-show
     , utf8-string
   default-language: Haskell2010
@@ -62,12 +57,7 @@ executable icfpc2021
   build-depends:
       base >=4.7 && <5
     , bytestring
-    , doctest
-    , hpack
-    , hspec
     , icfpc2021
-    , main-tester
-    , markdown-unlit
     , unicode-show
     , utf8-string
   default-language: Haskell2010
@@ -82,11 +72,6 @@ executable play-gui
   build-depends:
       base >=4.7 && <5
     , bytestring
-    , doctest
-    , hpack
-    , hspec
-    , main-tester
-    , markdown-unlit
     , unicode-show
     , utf8-string
   if flag(gui)
@@ -122,11 +107,7 @@ test-suite icfpc2021-doctest
       base >=4.7 && <5
     , bytestring
     , doctest
-    , hpack
-    , hspec
     , icfpc2021
-    , main-tester
-    , markdown-unlit
     , unicode-show
     , utf8-string
   default-language: Haskell2010
@@ -142,12 +123,9 @@ test-suite icfpc2021-test
   build-depends:
       base >=4.7 && <5
     , bytestring
-    , doctest
-    , hpack
     , hspec
     , icfpc2021
     , main-tester
-    , markdown-unlit
     , unicode-show
     , utf8-string
   default-language: Haskell2010
