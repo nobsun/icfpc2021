@@ -23,6 +23,16 @@ source-repository head
   type: git
   location: https://github.com/nobsun/icfpc2021
 
+flag gui
+  description: build playgui which requires OpenGL related libraries
+  manual: True
+  default: False
+
+flag static
+  description: build statically linked binaries
+  manual: True
+  default: False
+
 library
   exposed-modules:
       Lib
@@ -38,7 +48,6 @@ library
     , hspec
     , main-tester
     , markdown-unlit
-    , time
     , unicode-show
     , utf8-string
   default-language: Haskell2010
@@ -61,6 +70,44 @@ executable icfpc2021
     , markdown-unlit
     , unicode-show
     , utf8-string
+  default-language: Haskell2010
+
+executable play-gui
+  main-is: play-gui.hs
+  other-modules:
+      Paths_icfpc2021
+  hs-source-dirs:
+      app-play
+  ghc-options: -rtsopts -threaded
+  build-depends:
+      base >=4.7 && <5
+    , bytestring
+    , doctest
+    , hpack
+    , hspec
+    , main-tester
+    , markdown-unlit
+    , unicode-show
+    , utf8-string
+  if flag(gui)
+    build-depends:
+        GLFW-b
+      , OpenGL
+      , base
+      , containers
+      , icfpc2021
+      , mtl
+      , optparse-applicative
+      , pretty
+      , process
+      , stm
+      , transformers
+    buildable: True
+  else
+    buildable: False
+  if flag(static)
+    ghc-options: -static
+  else
   default-language: Haskell2010
 
 test-suite icfpc2021-doctest
