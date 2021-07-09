@@ -77,9 +77,7 @@ executables:
         else:
           buildable: false
       - condition: flag(static)
-        then:
-          ghc-options: -static
-        else: {}
+        ghc-options: -static
 
 tests:
   icfpc2021-test:
