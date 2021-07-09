@@ -76,6 +76,17 @@ instance ToJSON Problem where
   toJSON (Problem h f e) = object [ "hole" .= h, "figure" .= f, "epsilon" .= e ]
 
 
+data Pose = Pose { vertices :: [Point] } deriving Show
+
+instance FromJSON Pose where
+  parseJSON = withObject "pose" $ \o -> do
+    vertices <- o .: "vertices"
+    return $ Pose vertices
+
+instance ToJSON Pose where
+  toJSON (Pose vs) = object [ "vertices" .= vs ]
+
+
 -- ## `doctest`のための記述と定義本体
 -- テストは失敗するように書いてある
 
