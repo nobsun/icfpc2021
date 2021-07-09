@@ -33,6 +33,19 @@ dependencies:
 library:
   source-dirs: src
 
+
+flags:
+  static:
+    description: build statically linked binaries
+    default: false
+    manual: true
+
+  gui:
+    description: build playgui which requires OpenGL related libraries
+    default: false
+    manual: true
+
+
 executables:
   icfpc2021:
     main:                Main.hs
@@ -43,6 +56,35 @@ executables:
     # - -with-rtsopts=-N
     dependencies:
     - icfpc2021
+
+  play-gui:
+    main:                play-gui.hs
+    source-dirs:         app-play
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    when:
+      - condition: flag(gui)
+        then:
+          buildable: true
+          dependencies:
+          - icfpc2021
+          - containers
+          - process
+          - GLFW-b
+          - OpenGL
+          - base
+          - mtl
+          - optparse-applicative
+          - pretty
+          - stm
+          - transformers
+        else:
+          buildable: false
+      - condition: flag(static)
+        then:
+          ghc-options: -static
+        else: {}
 
 tests:
   icfpc2021-test:
