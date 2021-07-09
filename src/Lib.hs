@@ -54,8 +54,8 @@ type Hole = [Point]
 type Vertices = [Point]
 type Edges = [Edge]
 
-data Figure = Figure { edges :: [Point]
-                     , verticecs :: [Point]
+data Figure = Figure { edges :: Edges
+                     , verticecs :: Vertices
                      } deriving Show
 
 instance FromJSON Figure where
@@ -66,7 +66,7 @@ instance ToJSON Figure where
   toJSON (Figure es vs)
     = object [ "edges" .= es, "vertices" .= vs]
 
-data Problem = Problem { hole :: [Point]
+data Problem = Problem { hole :: Hole
                        , figure :: Figure
                        , epsilon :: Int
                        } deriving Show
