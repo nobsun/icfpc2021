@@ -22,3 +22,4 @@ cabal.project.local~
 .HTF/
 .ghc.environment.*
 .ghci
+.icfpc2021.cabal
