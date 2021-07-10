@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# OPTIONS -Wno-name-shadowing #-}
 module Parser
     ( Point (..)
     , Index
@@ -13,7 +14,7 @@ module Parser
     , Figure (..)
     , Problem (..)
     , Pose (..)
-    
+
     , readProblem
     ) where
 
@@ -150,4 +151,3 @@ instance FromJSON Pose where
 -}
 instance ToJSON Pose where
   toJSON (Pose vs) = object [ "vertices" .= vs ]
-
