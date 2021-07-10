@@ -8,4 +8,5 @@ main = doctest [ "-isrc"
                , "-package fgl"
                , "src/Parser.hs"
                , "src/Segment"
+               , "src/TwoDim"
                ]
