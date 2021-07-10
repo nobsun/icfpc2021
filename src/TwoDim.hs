@@ -28,11 +28,25 @@ v1 |-| v2 = v1 |+| negV v2
 
 infixl 6 |+|, |-|
 
+{- | 二乗距離
+>>> abs2V (0,0)
+0
+>>> abs2V (1,0)
+1
+>>> abs2V (0,1)
+1
+ -}
+-- 二乗距離
+abs2V :: Num a => Vec a -> a
+abs2V (x, y) = x^(2::Int) + y^(2::Int)
+
 {- | 法線
 >>> x = (1,2)
 >>> x /= (0,0)
 True
 >>> normalV x /= (0,0)
+True
+>>> abs2V (normalV x) == abs2V x -- 法線を取る操作は長さを変えない
 True
  -}
 -- normal vector - 法線ベクトル
@@ -42,14 +56,18 @@ normalV (x, y) = (-y, x)
 
 {- | 内積
 >>> x = (1,2)
->>> x |.| (0,0)
+>>> x |.| (0,0) -- 右零元
 0
->>> (0,0) |.| x
+>>> (0,0) |.| x -- 左零元
 0
->>> x |.| normalV x
+>>>  x |.| (1,0) == fst x -- 単位ベクトルとの内積 x
+True
+>>>  x |.| (0,1) == snd x -- 単位ベクトルとの内積 y
+True
+>>> x |.| normalV x -- 法線との内積は0
 0
->>> x |.| x
-5
+>>> x |.| x == abs2V x -- 自身との内積は2乗距離
+True
  -}
 --inner product - 内積
 (|.|) :: Num a => Vec a -> Vec a -> a
@@ -83,9 +101,6 @@ type Seg a = (Vec a, Vec a)
  line p0 p1 x = 0
  -}
 
-line :: Num a => Seg a -> Vec a -> a
-line (p0, p1) x = (x |-| p0) |.| normalV (p0 |-| p1)
-
 {-
      q0, q1 が (p0, p1) を通る直線の反対側にある
   ⇔ 直線の式に入れたときに符号が逆
@@ -97,6 +112,16 @@ line (p0, p1) x = (x |-| p0) |.| normalV (p0 |-| p1)
 
   line (p0, p1) q0 * line (p0, p1) q1 < 0
  -}
+
+{- | 直線
+>>> p@(p0,p1) = ((0,0),(6,8))
+>>> q@(q0,q1) = ((0,8),(6,0))
+>>> line (p0, p1) q0 * line (p0, p1) q1 < 0
+True
+ -}
+line :: Num a => Seg a -> Vec a -> a
+line (p0, p1) x = (x |-| p0) |.| normalV (p0 |-| p1)
+
 
 {-
   線分 (p0, p1) と 線分(q0, q1) の交差判定
@@ -110,6 +135,12 @@ line (p0, p1) x = (x |-| p0) |.| normalV (p0 |-| p1)
   line (q0, q1) p0 * line (q0, q1) p1 < 0
 -}
 
+{- | 線分の交差
+>>> p@(p0,p1) = ((0,0),(6,8))
+>>> q@(q0,q1) = ((0,8),(6,0))
+>>> crossSeg p q
+True
+ -}
 crossSeg :: (Num a, Ord a) => Seg a -> Seg a -> Bool
 crossSeg p@(p0, p1) q@(q0, q1) =
   line p q0 * line p q1 < 0 &&
