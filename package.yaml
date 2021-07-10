@@ -32,6 +32,10 @@ library:
   - aeson
   - fgl
   - containers
+  - scientific
+  - time
+  - vector
+  - MIP >=0.1.1 && <0.2
   ## - toysolver
 
 flags:
