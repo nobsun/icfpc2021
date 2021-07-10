@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.2.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 
@@ -41,6 +41,7 @@ library
       Parser
       Segment
       Solver.BackTracking
+      TwoDim
   other-modules:
       Paths_icfpc2021
   hs-source-dirs:
@@ -52,6 +53,7 @@ library
     , containers
     , fgl
     , filepath
+    , toysolver
     , unicode-show
     , utf8-string
   default-language: Haskell2010
