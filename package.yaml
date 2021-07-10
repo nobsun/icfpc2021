@@ -87,6 +87,19 @@ executables:
       - condition: flag(static)
         ghc-options: -static
 
+  submit:
+    main:                submit.hs
+    source-dirs:         app
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    dependencies:
+    - http-client
+    - http-conduit
+    - optparse-applicative
+    - mtl
+    - text
+
 tests:
   icfpc2021-test:
     main:                spec.hs
