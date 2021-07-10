@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.34.2.
 --
 -- see: https://github.com/sol/hpack
 
@@ -127,6 +127,7 @@ test-suite icfpc2021-test
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , fgl
     , filepath
     , hspec
     , icfpc2021
