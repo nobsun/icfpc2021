@@ -7,7 +7,7 @@ import Control.Exception
 import Control.Monad             (foldM, liftM, unless, when, void)
 import Control.Monad.RWS.Strict  (RWST, ask, asks, evalRWST, get, liftIO, modify, put)
 import Data.List                 (elemIndex)
-import Data.Maybe                (catMaybes, isJust, fromJust)
+import Data.Maybe                (catMaybes, isJust, fromJust, listToMaybe)
 import Data.IntMap.Lazy (IntMap)
 import qualified Data.IntMap.Lazy          as IntMap
 import qualified Data.Map                  as Map
@@ -296,7 +296,7 @@ processEvent ev =
                   bk = stateBk state
                   vs = stateVertices state
                   (sel,bk',vs') =
-                      case (stateSelectedNode state, (x',y')`elemIndex`vs) of
+                      case (stateSelectedNode state, (x',y')`nearElemIndex`vs) of
                         (Nothing, Nothing) -> (Nothing, bk, vs)
                         (Nothing, Just n)  -> (Just n, bk, vs)
                         (Just n, _)  -> case Bk.move bk n (x',y') of
@@ -310,7 +310,7 @@ processEvent ev =
                 }
               printEvent "mouse clicked" [show x', show y']
               printEvent "selected" [show sel]
-              printEvent "Bk" [show bk']
+              printEvent "vertices" [show vs']
               draw
 
       (EventCursorPos _ x y) -> do
@@ -336,6 +336,11 @@ processEvent ev =
 
       (EventChar _ c) ->
           printEvent "char" [show c]
+
+
+nearElemIndex :: (Int,Int) -> [(Int,Int)] -> Maybe Int
+nearElemIndex (x,y) as =
+  listToMaybe $ catMaybes [(x+dx, y+dy)`elemIndex`as | dx<-[-2,-1..2], dy<-[-2,-1..2]]
 
 adjustWindow :: Demo ()
 adjustWindow = do
