@@ -1,10 +1,17 @@
 {-# LANGUAGE MultiWayIf #-}
 module Segment
   ( intersect
+  , dist
+  , (×)
+  , (·)
   ) where
 
+<<<<<<< HEAD
+import Graph ( GSegment, GridPoint )
+=======
 import Prelude hiding (pi)
 import Graph
+>>>>>>> 906171d925424859c80b040a4291c5057f39a422
 
 {- | 交差判定
 >>> a = (0,0)
@@ -35,15 +42,26 @@ intersect (p1, p2) (p3, p4)
     d3 = direction p1 p2 p3
     d4 = direction p1 p2 p4
 
-
+-- | 外積
 (×) :: (Int, Int) -> (Int, Int) -> Int
 (xa, ya) × (xb, yb) = xa * yb - xb * ya
 
+-- | 方向ベクトル
 (−) :: GridPoint -> GridPoint -> GridPoint
 (xa, ya) − (xb, yb) = (xb - xa, yb - ya)
 
+-- | i を要とした j と k の位置関係: 0 < なら ccw、< 0 なら cw、 zero なら 3点は同一直線上にある
 direction :: GridPoint -> GridPoint -> GridPoint -> Int
 direction pi pj pk = (pk − pi) × (pj − pi)
 
+-- | 端点が他方の線分上にあるか
 onSegment :: GridPoint -> GridPoint -> GridPoint -> Bool
 onSegment (xi, yi) (xj, yj) (xk, yk) = min xi xj <= xk && xk <= max xi xj && min yi yj <= yk && yk <= max yi yj
+
+-- | 自乗距離
+dist :: GSegment -> Int
+dist (a, b) = ab · ab
+  where
+    ab = b − a 
+(·) :: (Int, Int) -> (Int, Int) -> Int
+(xa, ya) · (xb, yb) = xa * xb + ya * yb
