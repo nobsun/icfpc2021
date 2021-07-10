@@ -89,7 +89,7 @@ executables:
 
   submit:
     main:                submit.hs
-    source-dirs:         app
+    source-dirs:         app-submit
     ghc-options:
     - -rtsopts
     - -threaded

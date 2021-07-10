@@ -42,12 +42,6 @@ _test001 = do
 readProblem :: FilePath -> IO (Maybe Problem)
 readProblem fp = decode <$> LBS.readFile fp
 
--- genericParseArrayJSON_ :: (Generic a, GFromJSON Zero (Rep a), GFromArrayJSON (Rep a))
---                        => Value -> Parser a
--- genericParseArrayJSON_ = genericParseArrayJSON defaultAesonArrayOptions defaultOptions
-
--- genericParseJSON_ :: (Generic a, GFromJSON Zero (Rep a)) => Value -> Parser a
--- genericParseJSON_ = genericParseJSON defaultOptions
 
 data Point = Point { x :: Int
                    , y :: Int
