@@ -25,8 +25,8 @@ import qualified Data.ByteString.Lazy as LBS
 
 -- | data/problems/001.json をパースして Problem にして印字する
 --   TODO: サンプルなので API を作ったら破棄して OK です
-test001 :: IO ()
-test001 = do
+_test001 :: IO ()
+_test001 = do
   maybeProblem <- readProblem "data/problems/001.json"
   case maybeProblem of
     Just val -> print val
