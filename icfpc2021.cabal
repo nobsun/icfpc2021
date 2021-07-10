@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5849b7395066cd83519c091f38093925733e957730950e698306325e73a19c74
+-- hash: cafe37c206f12fcba5790bb37bb8313f4997da12bc58661d2a78252697dc5118
 
 name:           icfpc2021
 version:        0.1.0.0
@@ -40,7 +40,6 @@ library
       AesonArrayGeneric
       Graph
       Hole
-      Judge
       Lib
       Parser
       Score
