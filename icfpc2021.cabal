@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: cafe37c206f12fcba5790bb37bb8313f4997da12bc58661d2a78252697dc5118
+-- hash: 95ac96368a7e548435cde632cf3fcefc82669015b52a5705535bf82ef3a87f9d
 
 name:           icfpc2021
 version:        0.1.0.0
@@ -114,10 +114,9 @@ executable play-gui
 executable submit
   main-is: submit.hs
   other-modules:
-      Main
       Paths_icfpc2021
   hs-source-dirs:
-      app
+      app-submit
   ghc-options: -rtsopts -threaded
   build-depends:
       aeson
