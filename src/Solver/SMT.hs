@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DisambiguateRecordFields #-}
 module Solver.SMT
   ( solve
+  , test
   ) where
 
 import Control.Monad
@@ -170,7 +170,7 @@ solve prob = do
     ret <- loop 1
     case ret of
       Nothing -> error "should not happen"
-      Just sol -> return $ P.Pose (V.toList sol)
+      Just sol -> return $ P.Pose Nothing (V.toList sol)
 
   where
     hole = P.hole prob
@@ -195,7 +195,7 @@ test = do
         vs = V.fromList vs'
         eps = P.epsilon prob
 
-    pose@P.Pose{ P.vertices = ps } <- solve prob
+    pose@P.Pose{ P.pose'vertices = ps } <- solve prob
     hPrint stderr pose
 
     let hole = P.hole prob
