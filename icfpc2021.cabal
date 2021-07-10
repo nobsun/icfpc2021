@@ -1,10 +1,8 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.34.2.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 21ba78a9a126b16f9c73977c0949929c79f8bbfcabd566fbc5f66f743c4d5c37
 
 name:           icfpc2021
 version:        0.1.0.0
@@ -42,7 +40,6 @@ library
       Hole
       Lib
       Parser
-      PoseInfo
       Score
       Segment
       Solver.BackTracking

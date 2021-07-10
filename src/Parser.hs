@@ -220,8 +220,10 @@ instance FromJSON Pose where
    -}
 
 {- |
->>> encode $ Pose (Just [BonusUse GLOBALIST 35]) [Point 1 2, Point 3 4]
-"{\"bonuses\":[{\"bonus\":\"GLOBALIST\",\"problem\":35}],\"vertices\":[[1,2],[3,4]]}"
+>>> let expected = Pose (Just [BonusUse GLOBALIST 35]) [Point 1 2, Point 3 4]
+>>> let jsn = encode expected
+>>> Just expected == decode jsn
+True
 -}
 instance ToJSON Pose where
   toJSON = genericToJSON poseOptions
