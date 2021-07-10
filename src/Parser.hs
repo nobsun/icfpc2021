@@ -22,6 +22,7 @@ module Parser
 
 import GHC.Generics (Generic)
 -- import Control.Applicative
+import Data.List (stripPrefix)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 -- import System.FilePath (FilePath)
@@ -197,27 +198,34 @@ instance ToJSON Problem where
   -- toJSON (Problem h f e) = object [ "hole" .= h, "figure" .= f, "epsilon" .= e ]
 
 
+dropPrefix :: String -> String -> String
+dropPrefix prefix x =
+  maybe x id $ stripPrefix prefix x
+
+poseOptions :: Options
+poseOptions = defaultOptions { fieldLabelModifier = dropPrefix "pose'" }
+
 data BonusUse =
   BonusUse
-  { bonus :: BonusType
-  , problem :: Int
+  { pose'bonus :: BonusType
+  , pose'problem :: Int
   } deriving (Show, Eq, Generic)
 
 instance FromJSON BonusUse where
-  parseJSON = genericParseJSON defaultOptions
+  parseJSON = genericParseJSON poseOptions
 
 instance ToJSON BonusUse where
-  toJSON = genericToJSON defaultOptions
+  toJSON = genericToJSON poseOptions
 
-data Pose = Pose { bonuses :: Maybe [BonusUse], vertices :: [Point] } deriving (Show, Eq, Generic)
+data Pose = Pose { pose'bonuses :: Maybe [BonusUse], pose'vertices :: [Point] } deriving (Show, Eq, Generic)
 
 {- |
 >>> :set -XOverloadedStrings
 >>> decode "{\"bonuses\":[{\"bonus\":\"GLOBALIST\",\"problem\":35}],\"vertices\":[[1,2],[3,4]]}" :: Maybe Pose
-Just (Pose {bonuses = Just [BonusUse {bonus = GLOBALIST, problem = 35}], vertices = [Point {x = 1, y = 2},Point {x = 3, y = 4}]})
+Just (Pose {pose'bonuses = Just [BonusUse {pose'bonus = GLOBALIST, pose'problem = 35}], pose'vertices = [Point {x = 1, y = 2},Point {x = 3, y = 4}]})
 -}
 instance FromJSON Pose where
-  parseJSON = genericParseJSON defaultOptions
+  parseJSON = genericParseJSON poseOptions
   {-
   parseJSON = withObject "pose" $ \o -> do
     Pose <$> o .: "vertices"
@@ -228,5 +236,5 @@ instance FromJSON Pose where
 "{\"bonuses\":[{\"bonus\":\"GLOBALIST\",\"problem\":35}],\"vertices\":[[1,2],[3,4]]}"
 -}
 instance ToJSON Pose where
-  toJSON = genericToJSON defaultOptions
+  toJSON = genericToJSON poseOptions
   -- toJSON (Pose vs) = object [ "vertices" .= vs ]
