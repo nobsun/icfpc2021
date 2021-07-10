@@ -135,7 +135,7 @@ line (p0, p1) x = (x |-| p0) |.| normalV (p0 |-| p1)
   line (q0, q1) p0 * line (q0, q1) p1 < 0
 -}
 
-{- | 線分の交差
+{- | 線分の交差 - 端点が線分上は False
 >>> p@(p0,p1) = ((0,0),(6,8))
 >>> q@(q0,q1) = ((0,8),(6,0))
 >>> crossSeg p q
@@ -145,3 +145,22 @@ crossSeg :: (Num a, Ord a) => Seg a -> Seg a -> Bool
 crossSeg p@(p0, p1) q@(q0, q1) =
   line p q0 * line p q1 < 0 &&
   line q p0 * line q p1 < 0
+
+{- | 線分の交差 - 端点が線分上は True
+>>> p@(p0,p1) = ((0,0),(6,8))
+>>> q@(q0,q1) = ((0,8),(6,0))
+>>> crossSegOn p q
+True
+>>> p@(p0,p1) = ((0,0),(2,2))
+>>> q@(q0,q1) = ((0,8),(6,0))
+>>> crossSegOn p q
+False
+>>> p@(p0,p1) = ((0,0),(3,4))
+>>> q@(q0,q1) = ((0,8),(6,0))
+>>> crossSegOn p q
+True
+-}
+crossSegOn :: (Num a, Ord a) => Seg a -> Seg a -> Bool
+crossSegOn p@(p0, p1) q@(q0, q1) =
+  line p q0 * line p q1 <= 0 &&
+  line q p0 * line q p1 <= 0
