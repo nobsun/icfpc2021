@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# OPTIONS -Wno-name-shadowing #-}
 module Parser
     ( Point (..)
     , Index
@@ -13,19 +14,19 @@ module Parser
     , Figure (..)
     , Problem (..)
     , Pose (..)
-    
+
     , readProblem
     ) where
 
-import Control.Applicative
+-- import Control.Applicative
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
-import System.FilePath (FilePath)
+-- import System.FilePath (FilePath)
 
 -- | data/problems/001.json をパースして Problem にして印字する
 --   TODO: サンプルなので API を作ったら破棄して OK です
-test001 :: IO ()
-test001 = do
+_test001 :: IO ()
+_test001 = do
   maybeProblem <- readProblem "data/problems/001.json"
   case maybeProblem of
     Just val -> print val
@@ -150,4 +151,3 @@ instance FromJSON Pose where
 -}
 instance ToJSON Pose where
   toJSON (Pose vs) = object [ "vertices" .= vs ]
-
