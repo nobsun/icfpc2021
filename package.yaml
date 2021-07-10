@@ -32,6 +32,8 @@ library:
   - aeson
   - fgl
   - containers
+  - transformers
+  - vector
   ## - toysolver
   ghc-options: -Wall
 
