@@ -8,7 +8,7 @@ import Graph
 
 -- | squared distance
 sqrDistance :: (GridPoint, GridPoint) -> Int
-sqrDistance ((px, py), (qx, qy)) = (px - qx)^2 + (py - qy)^2
+sqrDistance ((px, py), (qx, qy)) = (px - qx)^(2::Int) + (py - qy)^(2::Int)
 
 dislike :: ([GridPoint], [GridPoint]) -> Int
 dislike (hole, pose) = sum [f h | h <- hole]
@@ -39,6 +39,6 @@ tolerant :: Int                    -- ^ epsilon
 tolerant eps (vi, vj) (vi', vj')
   = c * abs (d - d') <= d' * eps
   where
-    c = 10^6
+    c = 10^(6::Int)
     d  = sqrDistance (vi,  vj )
     d' = sqrDistance (vi', vj')
