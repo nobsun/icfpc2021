@@ -1,4 +1,16 @@
-module TwoDim where
+module TwoDim (
+  (|+|), (|-|),
+  negateV,
+  normalV,
+
+  (|.|), (|*|),
+  (·), (×),
+
+  dist,
+
+  intersect',
+  intersect,
+  ) where
 
 type Vec a = (a, a)
 
@@ -14,17 +26,17 @@ type Vec a = (a, a)
 (x1, y1) |+| (x2, y2) = (x1 + x2, y1 + y2)
 
 {- | 符号反転
->>> negV (0,0)
+>>> negateV (0,0)
 (0,0)
 >>> x = (1,2)
->>> x |+| negV x
+>>> x |+| negateV x
 (0,0)
  -}
-negV :: Num a => Vec a -> Vec a
-negV (x, y) = (negate x, negate y)
+negateV :: Num a => Vec a -> Vec a
+negateV (x, y) = (negate x, negate y)
 
 (|-|) :: Num a => Vec a -> Vec a -> Vec a
-v1 |-| v2 = v1 |+| negV v2
+v1 |-| v2 = v1 |+| negateV v2
 
 infixl 6 |+|, |-|
 
