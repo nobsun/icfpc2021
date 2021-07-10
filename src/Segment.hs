@@ -1,5 +1,7 @@
 {-# LANGUAGE MultiWayIf #-}
-module Segment where
+module Segment 
+  ( intersect
+  ) where
 
 import Graph
 
