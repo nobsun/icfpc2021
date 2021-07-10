@@ -29,16 +29,16 @@ v1 |-| v2 = v1 |+| negV v2
 infixl 6 |+|, |-|
 
 {- | 二乗距離
->>> abs2V (0,0)
+>>> dist (0,0)
 0
->>> abs2V (1,0)
+>>> dist (1,0)
 1
->>> abs2V (0,1)
+>>> dist (0,1)
 1
  -}
 -- 二乗距離
-abs2V :: Num a => Vec a -> a
-abs2V (x, y) = x^(2::Int) + y^(2::Int)
+dist :: Num a => Vec a -> a
+dist (x, y) = x^(2::Int) + y^(2::Int)
 
 {- | 法線
 >>> x = (1,2)
@@ -46,7 +46,7 @@ abs2V (x, y) = x^(2::Int) + y^(2::Int)
 True
 >>> normalV x /= (0,0)
 True
->>> abs2V (normalV x) == abs2V x -- 法線を取る操作は長さを変えない
+>>> dist (normalV x) == dist x -- 法線を取る操作は長さを変えない
 True
  -}
 -- normal vector - 法線ベクトル
@@ -66,7 +66,7 @@ True
 True
 >>> x |.| normalV x -- 法線との内積は0
 0
->>> x |.| x == abs2V x -- 自身との内積は2乗距離
+>>> x |.| x == dist x -- 自身との内積は2乗距離
 True
  -}
 --inner product - 内積
@@ -91,6 +91,11 @@ True
 
 infixl 7 |.|, |*|
 
+(·) :: Num a => Vec a -> Vec a -> a
+(·) = (|.|)
+
+(×) :: Num a => Vec a -> Vec a -> a
+(×) = (|*|)
 
 -- 線分
 type Seg a = (Vec a, Vec a)
@@ -138,37 +143,37 @@ line (p0, p1) x = (x |-| p0) |.| normalV (p0 |-| p1)
 {- | 線分の交差 - 端点が線分上なら False
 >>> p@(p0,p1) = ((0,0),(6,8))
 >>> q@(q0,q1) = ((0,8),(6,0))
->>> crossSeg p q
+>>> intersect' p q
 True
 >>> p@(p0,p1) = ((0,0),(2,2))
 >>> q@(q0,q1) = ((0,8),(6,0))
->>> crossSeg p q
+>>> intersect' p q
 False
 >>> p@(p0,p1) = ((0,0),(3,4))
 >>> q@(q0,q1) = ((0,8),(6,0))
->>> crossSeg p q
+>>> intersect' p q
 False
  -}
-crossSeg :: (Num a, Ord a) => Seg a -> Seg a -> Bool
-crossSeg p@(p0, p1) q@(q0, q1) =
+intersect' :: (Num a, Ord a) => Seg a -> Seg a -> Bool
+intersect' p@(p0, p1) q@(q0, q1) =
   line p q0 * line p q1 < 0 &&
   line q p0 * line q p1 < 0
 
 {- | 線分の交差 - 端点が線分上なら True
 >>> p@(p0,p1) = ((0,0),(6,8))
 >>> q@(q0,q1) = ((0,8),(6,0))
->>> crossSegOn p q
+>>> intersect p q
 True
 >>> p@(p0,p1) = ((0,0),(2,2))
 >>> q@(q0,q1) = ((0,8),(6,0))
->>> crossSegOn p q
+>>> intersect p q
 False
 >>> p@(p0,p1) = ((0,0),(3,4))
 >>> q@(q0,q1) = ((0,8),(6,0))
->>> crossSegOn p q
+>>> intersect p q
 True
 -}
-crossSegOn :: (Num a, Ord a) => Seg a -> Seg a -> Bool
-crossSegOn p@(p0, p1) q@(q0, q1) =
+intersect :: (Num a, Ord a) => Seg a -> Seg a -> Bool
+intersect p@(p0, p1) q@(q0, q1) =
   line p q0 * line p q1 <= 0 &&
   line q p0 * line q p1 <= 0
