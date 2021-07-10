@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -43,6 +44,9 @@ type GEdge   = G.LEdge Dist
 pedgeToGedge :: P.Edge -> GEdge
 pedgeToGedge = \ case
   P.Edge s e -> (s,e,0)
+
+gedgeToPedge :: GEdge -> P.Edge
+gedgeToPedge (s,e,_) = P.Edge s e
 
 -- | 穴
 type GHole = G.Gr GridPoint ()
@@ -94,9 +98,36 @@ segment :: G.Gr GridPoint Dist -> GEdge -> GSegment
 segment g e = case e of
   (m, n, _) -> (fromJust (G.lab g m), fromJust (G.lab g n))
 
-{- --
-mkGraph (labNodes g) $ map (segment g) (labEdges g)
--- -}
+-- | ポーズ
+
+type GPose = (Maybe [P.BonusUse], [GridPoint], GFigure)
+
+pposeToGpose :: (P.Figure, P.Pose) -> GPose
+pposeToGpose (pfig, ppose) = case ppose of
+  P.Pose bonus vs -> (bonus, map pointToGridPoint vs, pfigToGfig pfig)
+
+{- |
+>>> :set -XOverloadedStrings
+>>> Just fig = decode "{\"edges\":[[0,1],[0,2],[1,3],[2,3],[2,4],[3,4]],\"vertices\":[[0,20],[20,0],[20,40],[40,20],[49,45]]}" :: Maybe P.Figure
+>>> ofig = pfigToGfig fig
+>>> checkPoseByEpsilon 1250 (undefined,[(15,0),(35,20),(0,24),(20,44),(30,19)],ofig)
+[(1250,True,(800,800)),(1250,True,(800,801)),(1250,True,(800,801)),(1250,True,(800,800)),(1250,False,(866,925)),(1250,False,(706,725))]
+>>> checkPoseByEpsilon 1250 (undefined,[(15,0),(35,20),(0,24),(20,44),(29,19)],ofig)
+[(1250,True,(800,800)),(1250,True,(800,801)),(1250,True,(800,801)),(1250,True,(800,800)),(1250,True,(866,866)),(1250,True,(706,706))]
+-}
+checkPoseByEpsilon :: Int -> GPose -> [(Int, Bool, (Dist, Dist))]
+checkPoseByEpsilon ε (_,gs,fig)
+  = zipWith check oes pes'
+    where
+      oes = G.labEdges fig
+      pes = map gedgeToPedge oes
+      posefig = mkFigure gs pes
+      pes' = G.labEdges posefig
+      check (s,e,d) (s',e',d')
+        = if | (s,e) /= (s',e')                    -> error "bug!!"
+             | 10^(6::Int) * abs (d' - d) <= d * ε -> (ε, True, (d,d'))
+             | otherwise                           -> (ε, False, (d,d'))
+
 
 -- | 頂点の座標
 coord :: GVertex -> GridPoint
@@ -123,3 +154,4 @@ type Dist = Int
 
 (−) :: GridPoint -> GridPoint -> GridPoint
 (xa, ya) − (xb, yb) = (xb - xa, yb - ya)
+

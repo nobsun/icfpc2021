@@ -59,5 +59,6 @@ dist :: GSegment -> Int
 dist (a, b) = ab · ab
   where
     ab = b − a
+
 (·) :: (Int, Int) -> (Int, Int) -> Int
 (xa, ya) · (xb, yb) = xa * xb + ya * yb
