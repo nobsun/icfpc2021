@@ -3,6 +3,7 @@ module Segment
   ( intersect
   ) where
 
+import Prelude hiding (pi)
 import Graph
 
 {- | 交差判定
