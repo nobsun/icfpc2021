@@ -3,14 +3,32 @@ module LibSpec
   ( spec
   ) where
 
-import Data.String
-import qualified Codec.Binary.UTF8.String as U
-import qualified Data.ByteString as B
-import Test.Main
-import Test.Hspec
-import Text.Show.Unicode
-import Lib
+-- import Data.String
+-- import qualified Codec.Binary.UTF8.String as U
+-- import qualified Data.ByteString as B
+-- import Text.Show.Unicode
 
+-- import Test.Main
+import Test.Hspec
+
+-- import Lib
+
+
+spec :: Spec
+spec = describe "someFunc" $ do
+  return ()
+
+{-
+  { it "「なんか関数」を標準出力に印字する." $ do
+    { result <- captureProcessResult Lib.someFunc
+    ; prExitCode result `shouldBe` ExitSuccess
+    ; prStderr result `shouldSatisfy` B.null
+    ; ustring (prStdout result) `shouldBe` "なんか関数\n"
+    }
+  }
+ -}
+
+{-
 newtype UString a = UString a deriving Eq
 
 ustring :: B.ByteString -> UString String
@@ -21,14 +39,4 @@ instance IsString a => IsString (UString a) where
 
 instance Show a => Show (UString a) where
   show (UString s) = ushow s
-
-spec :: Spec
-spec = describe "someFunc" $ do
-  return ()
-  -- { it "「なんか関数」を標準出力に印字する." $ do
-  --   { result <- captureProcessResult Lib.someFunc
-  --   ; prExitCode result `shouldBe` ExitSuccess
-  --   ; prStderr result `shouldSatisfy` B.null
-  --   ; ustring (prStdout result) `shouldBe` "なんか関数\n"
-  --   }
-  -- }
+ -}
