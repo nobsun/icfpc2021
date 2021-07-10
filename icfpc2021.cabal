@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 15778a349188351cf1929121575ef0ae35ee05f35de88e5fa2846de5e0aa0569
+-- hash: 82711fd536c4ef40ad6a43e50b737af9aeb90b848badd7bb1502c80e22142283
 
 name:           icfpc2021
 version:        0.1.0.0
@@ -59,6 +59,7 @@ library
     , containers
     , fgl
     , filepath
+    , mtl
     , transformers
     , unicode-show
     , utf8-string
