@@ -33,6 +33,7 @@ library:
   - fgl
   - containers
   ## - toysolver
+  ghc-options: -Wall
 
 flags:
   static:
