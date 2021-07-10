@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 95ac96368a7e548435cde632cf3fcefc82669015b52a5705535bf82ef3a87f9d
+-- hash: 15778a349188351cf1929121575ef0ae35ee05f35de88e5fa2846de5e0aa0569
 
 name:           icfpc2021
 version:        0.1.0.0
@@ -45,6 +45,7 @@ library
       Score
       Segment
       Solver.BackTracking
+      Solver.SMT
       TwoDim
   other-modules:
       Paths_icfpc2021
@@ -62,6 +63,7 @@ library
     , unicode-show
     , utf8-string
     , vector
+    , z3
   default-language: Haskell2010
 
 executable icfpc2021
