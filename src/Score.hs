@@ -16,7 +16,7 @@ dislike (hole, pose) = sum [f h | h <- hole] -- map f hole
     f h = minimum [sqrDistance (h, v) | v <- pose]
 
 -- | NOTE: 浮動小数点の計算を避けたけど Int の maxBound に納まるかは仕様を調べきれてない
--- 
+--
 --   abs (d'/d - 1) <= e/10^6
 -- = abs ((d' - d)/d) <= e/10^6
 -- = abs (d' - d) <= d*e/10^6 -- d は square distance なので常に正
