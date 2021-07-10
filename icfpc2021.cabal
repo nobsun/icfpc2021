@@ -61,10 +61,8 @@ executable icfpc2021
       app
   ghc-options: -rtsopts
   build-depends:
-      aeson
-    , base >=4.7 && <5
+      base >=4.7 && <5
     , bytestring
-    , fgl
     , filepath
     , icfpc2021
     , unicode-show
@@ -79,10 +77,8 @@ executable play-gui
       app-play
   ghc-options: -rtsopts -threaded
   build-depends:
-      aeson
-    , base >=4.7 && <5
+      base >=4.7 && <5
     , bytestring
-    , fgl
     , filepath
     , unicode-show
     , utf8-string
@@ -115,13 +111,13 @@ test-suite icfpc2021-doctest
   hs-source-dirs:
       test
   build-depends:
-      aeson
-    , base >=4.7 && <5
+      base >=4.7 && <5
     , bytestring
     , doctest
-    , fgl
     , filepath
+    , hspec
     , icfpc2021
+    , main-tester
     , unicode-show
     , utf8-string
   default-language: Haskell2010
@@ -135,10 +131,8 @@ test-suite icfpc2021-test
   hs-source-dirs:
       test
   build-depends:
-      aeson
-    , base >=4.7 && <5
+      base >=4.7 && <5
     , bytestring
-    , fgl
     , filepath
     , hspec
     , icfpc2021

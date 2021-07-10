@@ -21,15 +21,16 @@ description:         Please see the README on GitHub at <https://github.com/nobs
 
 dependencies:
 - base >= 4.7 && < 5
-- unicode-show
 - bytestring
-- utf8-string
-- aeson
-- fgl
 - filepath
+- utf8-string
+- unicode-show
 
 library:
   source-dirs: src
+  dependencies:
+  - aeson
+  - fgl
 
 
 flags:
@@ -105,3 +106,5 @@ tests:
     dependencies:
     - icfpc2021
     - doctest
+    - hspec
+    - main-tester
