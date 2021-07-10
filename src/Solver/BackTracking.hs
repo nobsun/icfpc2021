@@ -1,5 +1,5 @@
-module BackTrack
-( Bk(..), mkBk, move )
+module Solver.BackTracking
+( Bk(..), mkBk, move, sample1 )
 where
 
 import Data.Maybe (listToMaybe)
