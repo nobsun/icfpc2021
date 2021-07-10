@@ -86,7 +86,7 @@ type Edges = [Edge]
 
 data Figure = Figure { edges    :: Edges
                      , vertices :: Vertices
-                     } deriving Show
+                     } deriving (Show, Eq)
 
 {- |
 >>> :set -XOverloadedStrings
@@ -99,8 +99,10 @@ instance FromJSON Figure where
 
 {- |
 >>> :set -XDuplicateRecordFields
->>> encode $ Figure { edges = [Edge 1 2, Edge 3 4], vertices = [Point 5 6] }
-"{\"edges\":[[1,2],[3,4]],\"vertices\":[[5,6]]}"
+>>> let expected = Figure { edges = [Edge 1 2, Edge 3 4], vertices = [Point 5 6] }
+>>> let jsn = encode expected
+>>> Just expected == decode jsn
+True
 -}
 instance ToJSON Figure where
   toJSON (Figure es vs)
@@ -109,7 +111,7 @@ instance ToJSON Figure where
 data Problem = Problem { hole    :: Hole
                        , figure  :: Figure
                        , epsilon :: Int
-                       } deriving Show
+                       } deriving (Show, Eq)
 {- |
 >>> decode "{\"epsilon\":1500,\"hole\":[[10,20],[30,40],[50,60]],\"figure\":{\"edges\":[[1,2],[3,4]],\"vertices\":[[5,6]]}}" :: Maybe Problem
 Just (Problem {hole = [Point {x = 10, y = 20},Point {x = 30, y = 40},Point {x = 50, y = 60}], figure = Figure {edges = [Edge {s = 1, e = 2},Edge {s = 3, e = 4}], vertices = [Point {x = 5, y = 6}]}, epsilon = 1500})
@@ -122,14 +124,16 @@ instance FromJSON Problem where
 >>> :set -XDuplicateRecordFields
 >>> let h =  [Point 10 20, Point 30 40, Point 50 60]
 >>> let f = Figure { edges = [Edge 1 2, Edge 3 4], vertices = [Point 5 6] }
->>> encode $ Problem { hole = h, figure = f, epsilon = 1500 }
-"{\"epsilon\":1500,\"hole\":[[10,20],[30,40],[50,60]],\"figure\":{\"edges\":[[1,2],[3,4]],\"vertices\":[[5,6]]}}"
+>>> let expected = Problem { hole = h, figure = f, epsilon = 1500 }
+>>> let jsn = encode expected
+>>> Just expected == decode jsn
+True
 -}
 instance ToJSON Problem where
   toJSON (Problem h f e) = object [ "hole" .= h, "figure" .= f, "epsilon" .= e ]
 
 
-data Pose = Pose { vertices :: [Point] } deriving Show
+data Pose = Pose { vertices :: [Point] } deriving (Show, Eq)
 
 {- |
 >>> :set -XOverloadedStrings
