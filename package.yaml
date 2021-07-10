@@ -34,6 +34,8 @@ library:
   - containers
   - transformers
   - vector
+  - z3
+  - mtl
   ## - toysolver
   ghc-options: -Wall
 
