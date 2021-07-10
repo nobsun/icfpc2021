@@ -36,6 +36,7 @@ flag static
 library
   exposed-modules:
       Graph
+      Hole
       Lib
       Parser
       Segment
