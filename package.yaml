@@ -86,6 +86,8 @@ executables:
 tests:
   icfpc2021-test:
     main:                spec.hs
+    other-modules:
+    - LibSpec
     source-dirs:         test
     # ghc-options:
     # - -threaded
@@ -98,6 +100,7 @@ tests:
 
   icfpc2021-doctest:
     main:                doctests.hs
+    other-modules:       []
     source-dirs:         test
     # ghc-options:
     # - -threaded
@@ -106,5 +109,3 @@ tests:
     dependencies:
     - icfpc2021
     - doctest
-    - hspec
-    - main-tester

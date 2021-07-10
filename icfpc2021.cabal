@@ -105,9 +105,6 @@ executable play-gui
 test-suite icfpc2021-doctest
   type: exitcode-stdio-1.0
   main-is: doctests.hs
-  other-modules:
-      LibSpec
-      Paths_icfpc2021
   hs-source-dirs:
       test
   build-depends:
@@ -115,9 +112,7 @@ test-suite icfpc2021-doctest
     , bytestring
     , doctest
     , filepath
-    , hspec
     , icfpc2021
-    , main-tester
     , unicode-show
     , utf8-string
   default-language: Haskell2010
@@ -127,7 +122,6 @@ test-suite icfpc2021-test
   main-is: spec.hs
   other-modules:
       LibSpec
-      Paths_icfpc2021
   hs-source-dirs:
       test
   build-depends:
