@@ -96,6 +96,7 @@ tests:
     # - -rtsopts
     # - -with-rtsopts=-N
     dependencies:
+    - fgl
     - icfpc2021
     - hspec
     - main-tester
