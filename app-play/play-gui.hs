@@ -164,7 +164,7 @@ main = do
             es = map (\(P.Edge  s e) -> (s,e)) $ P.edges (P.figure problem)
             vs = map (\(P.Point x y) -> (x,y)) $ case mPose of
               Nothing           -> vertices (P.figure problem)
-              Just (P.Pose vs') -> vs'
+              Just (P.Pose {P.pose'vertices = vs'}) -> vs'
             state_ = State
               { stateWindowWidth     = winWidth
               , stateWindowHeight    = winHeight
@@ -442,4 +442,3 @@ showModifierKeys mk =
          , if GLFW.modifierKeysAlt     mk then Just "alt"     else Nothing
          , if GLFW.modifierKeysSuper   mk then Just "super"   else Nothing
          ]
-
