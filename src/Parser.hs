@@ -12,7 +12,7 @@ module Parser
     , Vertices
     , Figure (..)
     , Problem (..)
-    , Pose
+    , Pose (..)
     
     , readProblem
     ) where
