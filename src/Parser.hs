@@ -2,7 +2,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# OPTIONS -Wno-name-shadowing #-}
@@ -22,6 +21,7 @@ module Parser
 
 import GHC.Generics (Generic)
 -- import Control.Applicative
+import Data.List (stripPrefix)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 -- import System.FilePath (FilePath)
@@ -153,7 +153,6 @@ instance FromJSON Figure where
    -}
 
 {- |
->>> :set -XDuplicateRecordFields
 >>> let expected = Figure { edges = [Edge 1 2, Edge 3 4], vertices = [Point 5 6] }
 >>> let jsn = encode expected
 >>> Just expected == decode jsn
@@ -183,7 +182,6 @@ instance FromJSON Problem where
    -}
 
 {- |
->>> :set -XDuplicateRecordFields
 >>> let h =  [Point 10 20, Point 30 40, Point 50 60]
 >>> let f = Figure { edges = [Edge 1 2, Edge 3 4], vertices = [Point 5 6] }
 >>> let b = Just [BonusDef {position = Point {x = 62, y = 46}, bonus = GLOBALIST, problem = 35}]
@@ -197,27 +195,34 @@ instance ToJSON Problem where
   -- toJSON (Problem h f e) = object [ "hole" .= h, "figure" .= f, "epsilon" .= e ]
 
 
+dropPrefix :: String -> String -> String
+dropPrefix prefix x =
+  maybe x id $ stripPrefix prefix x
+
+poseOptions :: Options
+poseOptions = defaultOptions { fieldLabelModifier = dropPrefix "pose'" }
+
 data BonusUse =
   BonusUse
-  { bonus :: BonusType
-  , problem :: Int
+  { pose'bonus :: BonusType
+  , pose'problem :: Int
   } deriving (Show, Eq, Generic)
 
 instance FromJSON BonusUse where
-  parseJSON = genericParseJSON defaultOptions
+  parseJSON = genericParseJSON poseOptions
 
 instance ToJSON BonusUse where
-  toJSON = genericToJSON defaultOptions
+  toJSON = genericToJSON poseOptions
 
-data Pose = Pose { bonuses :: Maybe [BonusUse], vertices :: [Point] } deriving (Show, Eq, Generic)
+data Pose = Pose { pose'bonuses :: Maybe [BonusUse], pose'vertices :: [Point] } deriving (Show, Eq, Generic)
 
 {- |
 >>> :set -XOverloadedStrings
 >>> decode "{\"bonuses\":[{\"bonus\":\"GLOBALIST\",\"problem\":35}],\"vertices\":[[1,2],[3,4]]}" :: Maybe Pose
-Just (Pose {bonuses = Just [BonusUse {bonus = GLOBALIST, problem = 35}], vertices = [Point {x = 1, y = 2},Point {x = 3, y = 4}]})
+Just (Pose {pose'bonuses = Just [BonusUse {pose'bonus = GLOBALIST, pose'problem = 35}], pose'vertices = [Point {x = 1, y = 2},Point {x = 3, y = 4}]})
 -}
 instance FromJSON Pose where
-  parseJSON = genericParseJSON defaultOptions
+  parseJSON = genericParseJSON poseOptions
   {-
   parseJSON = withObject "pose" $ \o -> do
     Pose <$> o .: "vertices"
@@ -228,5 +233,5 @@ instance FromJSON Pose where
 "{\"bonuses\":[{\"bonus\":\"GLOBALIST\",\"problem\":35}],\"vertices\":[[1,2],[3,4]]}"
 -}
 instance ToJSON Pose where
-  toJSON = genericToJSON defaultOptions
+  toJSON = genericToJSON poseOptions
   -- toJSON (Pose vs) = object [ "vertices" .= vs ]
