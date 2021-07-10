@@ -38,6 +38,7 @@ library
       Graph
       Lib
       Parser
+      Segment
   other-modules:
       Paths_icfpc2021
   hs-source-dirs:
