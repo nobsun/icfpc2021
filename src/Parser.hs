@@ -66,8 +66,8 @@ type Hole = [Point]
 type Vertices = [Point]
 type Edges = [Edge]
 
-data Figure = Figure { edges     :: Edges
-                     , verticecs :: Vertices
+data Figure = Figure { edges    :: Edges
+                     , vertices :: Vertices
                      } deriving Show
 
 instance FromJSON Figure where
