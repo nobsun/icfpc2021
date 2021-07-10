@@ -6,12 +6,8 @@ module Segment
   , (·)
   ) where
 
-<<<<<<< HEAD
-import Graph ( GSegment, GridPoint )
-=======
 import Prelude hiding (pi)
-import Graph
->>>>>>> 906171d925424859c80b040a4291c5057f39a422
+import Graph ( GSegment, GridPoint )
 
 {- | 交差判定
 >>> a = (0,0)
@@ -62,6 +58,6 @@ onSegment (xi, yi) (xj, yj) (xk, yk) = min xi xj <= xk && xk <= max xi xj && min
 dist :: GSegment -> Int
 dist (a, b) = ab · ab
   where
-    ab = b − a 
+    ab = b − a
 (·) :: (Int, Int) -> (Int, Int) -> Int
 (xa, ya) · (xb, yb) = xa * xb + ya * yb
