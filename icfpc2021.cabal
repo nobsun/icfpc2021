@@ -53,7 +53,6 @@ library
     , containers
     , fgl
     , filepath
-    , toysolver
     , unicode-show
     , utf8-string
   default-language: Haskell2010
