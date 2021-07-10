@@ -18,10 +18,10 @@ module Parser
     , readProblem
     ) where
 
-import Control.Applicative
+-- import Control.Applicative
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
-import System.FilePath (FilePath)
+-- import System.FilePath (FilePath)
 
 -- | data/problems/001.json をパースして Problem にして印字する
 --   TODO: サンプルなので API を作ったら破棄して OK です
