@@ -2,6 +2,7 @@ module Score
   ( sqrDistance
   , dislike
   , tolerant
+  , possibleLengthRange
   ) where
 
 import Graph
@@ -52,3 +53,20 @@ tolerant eps (vi, vj) (vi', vj')
     c = 10^(6::Int)
     d  = sqrDistance (vi,  vj )
     d' = sqrDistance (vi', vj')
+
+{- |
+>>> possibleLengthRange (10^(6::Int)) ((0,0),(3,4))
+(0,50)
+-}
+possibleLengthRange
+  :: Int                    -- ^ epsilon
+  -> (GridPoint, GridPoint) -- ^ original edge
+  -> (Int, Int)             -- ^ min and max length
+possibleLengthRange eps (vi, vj) = (min', max')
+ where
+  c    = 10 ^ (6 :: Int)
+  d    = sqrDistance (vi, vj)
+  eps' = fromIntegral eps :: Rational
+  max' = floor $ (1 + eps' / c) * toRational d
+  min' = ceiling $ (1 - eps' / c) * toRational d
+

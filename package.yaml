@@ -89,6 +89,35 @@ executables:
       - condition: flag(static)
         ghc-options: -static
 
+  semi-auto:
+    main:                semi-auto.hs
+    other-modules:       []
+    source-dirs:         app-play
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    when:
+      - condition: flag(gui)
+        then:
+          buildable: true
+          dependencies:
+          - icfpc2021
+          - containers
+          - process
+          - GLFW-b
+          - OpenGL
+          - base
+          - mtl
+          - optparse-applicative
+          - pretty
+          - stm
+          - transformers
+          - StateVar
+        else:
+          buildable: false
+      - condition: flag(static)
+        ghc-options: -static
+
   submit:
     main:                submit.hs
     source-dirs:         app-submit
