@@ -40,7 +40,7 @@ True
 >>> tolerant 150000 ((10, 15), (20, 11)) ((11, 14), (21, 12))
 True
 >>> tolerant 150000 ((12, 15), (20, 11)) ((11, 14), (21, 12))
-True
+False
 -}
 tolerant :: Int                    -- ^ epsilon
          -> (GridPoint, GridPoint) -- ^ before
