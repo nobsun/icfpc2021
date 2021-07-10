@@ -23,13 +23,13 @@ dependencies:
 - base >= 4.7 && < 5
 - bytestring
 - filepath
+- aeson
 
 library:
   source-dirs: src
   dependencies:
   - utf8-string
   - unicode-show
-  - aeson
   - fgl
   - containers
   ## - toysolver
