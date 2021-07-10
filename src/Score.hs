@@ -37,9 +37,7 @@ tolerant :: Int                    -- ^ epsilon
          -> (GridPoint, GridPoint) -- ^ after
          -> Bool                   -- ^ result
 tolerant eps (vi, vj) (vi', vj')
-  | d' > d = (c + eps) * d >= c * d'
-  | d' < d = (c - eps) * d <= c * d'
-  | otherwise = True
+  = c * abs (d - d') <= d' * eps
   where
     c = 10^6
     d  = sqrDistance (vi,  vj )
