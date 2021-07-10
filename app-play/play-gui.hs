@@ -365,13 +365,17 @@ processEvent ev =
 
       (EventChar _ c) -> do
           state <- get
-          let (dx,dy) = case c of
-                       'a' -> (-1, 0)
-                       'd' -> ( 1, 0)
-                       'w' -> ( 0,-1)
-                       's' -> ( 0, 1)
-                       _   -> ( 0, 0)
-              vs' = [(x+dx,y+dy) | (x,y) <-stateVertices state]
+          let (dx,dy,mx,my) = case c of
+                       'a' -> (-1, 0, 1 ,1)
+                       'd' -> ( 1, 0, 1, 1)
+                       'w' -> ( 0,-1, 1, 1)
+                       's' -> ( 0, 1, 1, 1)
+                       'x' -> ( 0, 0,-1, 1)
+                       'y' -> ( 0, 0, 1,-1)
+                       _   -> ( 0, 0, 1, 1)
+              vs = stateVertices state
+              vs' = if c=='r' then map rotate vs
+                              else [(mx*(x+dx),my*(y+dy)) | (x,y) <-vs]
           modify $ \s -> s
             { stateVertices = vs'
             }
@@ -379,6 +383,8 @@ processEvent ev =
           printEvent "vertices" [show vs']
           draw
 
+rotate :: (Int,Int) -> (Int,Int)
+rotate (x, y) = (y, -x)
 
 nearElemIndex :: (Int,Int) -> [(Int,Int)] -> Maybe Int
 nearElemIndex (x,y) as =
