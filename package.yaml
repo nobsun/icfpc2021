@@ -88,6 +88,7 @@ tests:
     main:                spec.hs
     other-modules:
     - LibSpec
+    - HoleSpec
     source-dirs:         test
     # ghc-options:
     # - -threaded

@@ -119,6 +119,7 @@ test-suite icfpc2021-test
   main-is: spec.hs
   other-modules:
       LibSpec
+      HoleSpec
   hs-source-dirs:
       test
   build-depends:
