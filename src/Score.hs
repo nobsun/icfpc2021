@@ -15,7 +15,7 @@ import Graph
 sqrDistance :: (GridPoint, GridPoint) -> Int
 sqrDistance ((px, py), (qx, qy)) = (px - qx)^(2::Int) + (py - qy)^(2::Int)
 
-{- |
+{- | dislike
 >>> dislike ([(10, 20)], [(20, 25)])
 125
 >>> dislike ([(10, 20), (15, 15), (20, 10)], [(20, 25), (15, 30), (20, 25)])
