@@ -334,8 +334,20 @@ processEvent ev =
       (EventKey _win k scancode ks mk) -> do
           printEvent "key" [show k, show scancode, show ks, showModifierKeys mk]
 
-      (EventChar _ c) ->
+      (EventChar _ c) -> do
+          state <- get
+          let (dx,dy) = case c of
+                       'a' -> (-1, 0)
+                       'd' -> ( 1, 0)
+                       'w' -> ( 0,-1)
+                       's' -> ( 0, 1)
+              vs' = [(x+dx,y+dy) | (x,y) <-stateVertices state]
+          modify $ \s -> s
+            { stateVertices = vs'
+            }
           printEvent "char" [show c]
+          printEvent "vertices" [show vs']
+          draw
 
 
 nearElemIndex :: (Int,Int) -> [(Int,Int)] -> Maybe Int
@@ -363,7 +375,7 @@ draw = do
     liftIO $ do
       GL.clear [GL.ColorBuffer, GL.DepthBuffer]
       GL.color (GL.Color3 1 1 1 :: GL.Color3 GL.GLfloat)
-      GL.renderPrimitive GL.Polygon $ mapM_ (GL.vertex . toV) (stateHole state)
+      GL.renderPrimitive GL.LineLoop $ mapM_ (GL.vertex . toV) (stateHole state)
       GL.color (GL.Color3 0.7 0 0 :: GL.Color3 GL.GLfloat)
       GL.renderPrimitive GL.Lines $ mapM_ GL.vertex (edgeToV (stateVertices state) (stateEdges state))
       GLFW.swapBuffers (envWindow env)

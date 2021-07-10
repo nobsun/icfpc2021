@@ -12,7 +12,7 @@ module Parser
     , Vertices
     , Figure (..)
     , Problem (..)
-    , Pose
+    , Pose (..)
     
     , readProblem
     ) where
@@ -36,7 +36,7 @@ readProblem fp = decode <$> LBS.readFile fp
 
 data Point = Point { x :: Int
                    , y :: Int
-                   } deriving (Show, Eq)
+                   } deriving (Show, Eq, Ord)
 {- |
 >>> :set -XOverloadedStrings
 >>> decode "[1, 2]" :: Maybe Point
