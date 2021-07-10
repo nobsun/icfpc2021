@@ -30,5 +30,9 @@ spec = do
       forM_ ps $ \(x,y) -> do
         isInsideHole (P.Point x y) lambdaman `shouldBe` False
 
+  describe "innerPoints" $ do
+    it "returnes expected values" $ do
+      length (innerPoints lambdaman) `shouldBe` 3836
+
 lambdaman :: P.Hole
 lambdaman = [P.Point x y | (x,y) <- [(55, 80), (65, 95), (95, 95), (35, 5), (5, 5), (35, 50), (5, 95), (35, 95), (45, 80)]]
