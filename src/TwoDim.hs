@@ -28,18 +28,6 @@ v1 |-| v2 = v1 |+| negV v2
 
 infixl 6 |+|, |-|
 
-{- | 二乗距離
->>> dist (0,0)
-0
->>> dist (1,0)
-1
->>> dist (0,1)
-1
- -}
--- 二乗距離
-dist :: Num a => Vec a -> a
-dist (x, y) = x^(2::Int) + y^(2::Int)
-
 {- | 法線
 >>> x = (1,2)
 >>> x /= (0,0)
@@ -53,7 +41,6 @@ True
 normalV :: Num a => Vec a -> Vec a
 normalV (x, y) = (-y, x)
 
-
 {- | 内積
 >>> x = (1,2)
 >>> x |.| (0,0) -- 右零元
@@ -66,8 +53,6 @@ True
 True
 >>> x |.| normalV x -- 法線との内積は0
 0
->>> x |.| x == dist x -- 自身との内積は2乗距離
-True
  -}
 --inner product - 内積
 (|.|) :: Num a => Vec a -> Vec a -> a
@@ -96,6 +81,22 @@ infixl 7 |.|, |*|
 
 (×) :: Num a => Vec a -> Vec a -> a
 (×) = (|*|)
+
+{- | 二乗距離
+>>> dist (0,0)
+0
+>>> dist (1,0)
+1
+>>> dist (0,1)
+1
+>>> dist (1,2)
+5
+ -}
+-- 二乗距離
+dist :: Num a => Vec a -> a
+dist v = v |.| v
+
+-----
 
 -- 線分
 type Seg a = (Vec a, Vec a)
