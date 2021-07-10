@@ -39,6 +39,7 @@ library
       Hole
       Lib
       Parser
+      Score
       Segment
       Solver.BackTracking
       TwoDim
