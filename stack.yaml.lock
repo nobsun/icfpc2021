@@ -5,6 +5,13 @@
 
 packages:
 - completed:
+    hackage: z3-408.2@sha256:1f8b6ccbcc6d06a6701900a09fcfcbaf86ed8a8495615710bef4da5cdb073a3f,4226
+    pantry-tree:
+      size: 1476
+      sha256: e8562391054f4e07035ab25e1c7ecfba687a46e15aefee4c588b6434dc0b93d8
+  original:
+    hackage: z3-408.2@sha256:1f8b6ccbcc6d06a6701900a09fcfcbaf86ed8a8495615710bef4da5cdb073a3f,4226
+- completed:
     hackage: MIP-0.1.1.0@sha256:01bbc71cbeabb76c8e23a68e351ff1f73cfb841ba105114d34666849de79a24a,4442
     pantry-tree:
       size: 2372
