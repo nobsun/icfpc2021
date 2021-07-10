@@ -70,7 +70,8 @@ executable icfpc2021
       app
   ghc-options: -rtsopts
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , bytestring
     , filepath
     , icfpc2021
@@ -84,7 +85,8 @@ executable play-gui
       app-play
   ghc-options: -rtsopts -threaded
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , bytestring
     , filepath
   if flag(gui)
@@ -113,7 +115,8 @@ test-suite icfpc2021-doctest
   hs-source-dirs:
       test
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , bytestring
     , doctest
     , filepath
@@ -126,10 +129,12 @@ test-suite icfpc2021-test
   other-modules:
       LibSpec
       HoleSpec
+      ScoreSpec
   hs-source-dirs:
       test
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , bytestring
     , fgl
     , filepath
