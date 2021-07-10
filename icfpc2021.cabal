@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.2.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 
@@ -35,6 +35,7 @@ flag static
 
 library
   exposed-modules:
+      Graph
       Lib
       Parser
   other-modules:
@@ -45,6 +46,7 @@ library
       aeson
     , base >=4.7 && <5
     , bytestring
+    , fgl
     , filepath
     , unicode-show
     , utf8-string
@@ -61,6 +63,8 @@ executable icfpc2021
       aeson
     , base >=4.7 && <5
     , bytestring
+    , fgl
+    , filepath
     , icfpc2021
     , unicode-show
     , utf8-string
@@ -74,8 +78,11 @@ executable play-gui
       app-play
   ghc-options: -rtsopts -threaded
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , bytestring
+    , fgl
+    , filepath
     , unicode-show
     , utf8-string
   if flag(gui)
@@ -96,7 +103,6 @@ executable play-gui
     buildable: False
   if flag(static)
     ghc-options: -static
-  else
   default-language: Haskell2010
 
 test-suite icfpc2021-doctest
@@ -108,9 +114,12 @@ test-suite icfpc2021-doctest
   hs-source-dirs:
       test
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , bytestring
     , doctest
+    , fgl
+    , filepath
     , icfpc2021
     , unicode-show
     , utf8-string
@@ -125,8 +134,11 @@ test-suite icfpc2021-test
   hs-source-dirs:
       test
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , bytestring
+    , fgl
+    , filepath
     , hspec
     , icfpc2021
     , main-tester
