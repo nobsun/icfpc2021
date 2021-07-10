@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.34.2.
 --
 -- see: https://github.com/sol/hpack
 
@@ -36,9 +36,11 @@ flag static
 library
   exposed-modules:
       Graph
+      Hole
       Lib
       Parser
       Segment
+      Solver.BackTracking
   other-modules:
       Paths_icfpc2021
   hs-source-dirs:
@@ -47,6 +49,7 @@ library
       aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , fgl
     , filepath
     , unicode-show
@@ -65,8 +68,6 @@ executable icfpc2021
     , bytestring
     , filepath
     , icfpc2021
-    , unicode-show
-    , utf8-string
   default-language: Haskell2010
 
 executable play-gui
@@ -80,8 +81,6 @@ executable play-gui
       base >=4.7 && <5
     , bytestring
     , filepath
-    , unicode-show
-    , utf8-string
   if flag(gui)
     build-depends:
         GLFW-b
@@ -105,9 +104,6 @@ executable play-gui
 test-suite icfpc2021-doctest
   type: exitcode-stdio-1.0
   main-is: doctests.hs
-  other-modules:
-      LibSpec
-      Paths_icfpc2021
   hs-source-dirs:
       test
   build-depends:
@@ -115,11 +111,7 @@ test-suite icfpc2021-doctest
     , bytestring
     , doctest
     , filepath
-    , hspec
     , icfpc2021
-    , main-tester
-    , unicode-show
-    , utf8-string
   default-language: Haskell2010
 
 test-suite icfpc2021-test
@@ -127,7 +119,7 @@ test-suite icfpc2021-test
   main-is: spec.hs
   other-modules:
       LibSpec
-      Paths_icfpc2021
+      HoleSpec
   hs-source-dirs:
       test
   build-depends:
@@ -137,6 +129,4 @@ test-suite icfpc2021-test
     , hspec
     , icfpc2021
     , main-tester
-    , unicode-show
-    , utf8-string
   default-language: Haskell2010
