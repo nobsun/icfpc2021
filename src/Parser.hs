@@ -67,6 +67,41 @@ instance ToJSON Point where
   toJSON = genericToArrayJSON
   -- toJSON (Point x y) = toJSON [x, y]
 
+data BonusType
+  = GLOBALIST
+  | BREAK_A_LEG deriving (Show, Eq, Generic)
+
+{- |
+>>> decode "\"BREAK_A_LEG\"" :: Maybe BonusType
+Just BREAK_A_LEG
+-}
+instance FromJSON BonusType where
+  parseJSON = genericParseJSON defaultOptions
+
+{- |
+>>> encode BREAK_A_LEG
+"\"BREAK_A_LEG\""
+-}
+instance ToJSON BonusType where
+  toJSON = genericToJSON defaultOptions
+
+data BonusDef =
+  BonusDef
+  { position :: Point
+  , bonus :: BonusType
+  , problem :: Int
+  } deriving (Show, Eq, Generic)
+
+{- |
+>>> decode "{\"position\":[1, 2],\"bonus\":\"GLOBALIST\",\"problem\":1}" :: Maybe BonusDef
+Just (BonusDef {position = Point {x = 1, y = 2}, bonus = GLOBALIST, problem = 1})
+-}
+instance FromJSON BonusDef where
+  parseJSON = genericParseJSON defaultOptions
+
+instance ToJSON BonusDef where
+  toJSON = genericToJSON defaultOptions
+
 type Index = Int
 
 -- | Edge
@@ -131,13 +166,14 @@ instance ToJSON Figure where
     = object [ "edges" .= es, "vertices" .= vs]
    -}
 
-data Problem = Problem { hole    :: Hole
+data Problem = Problem { bonuses :: Maybe [BonusDef]
+                       , hole    :: Hole
                        , figure  :: Figure
                        , epsilon :: Int
                        } deriving (Show, Eq, Generic)
 {- |
->>> decode "{\"epsilon\":1500,\"hole\":[[10,20],[30,40],[50,60]],\"figure\":{\"edges\":[[1,2],[3,4]],\"vertices\":[[5,6]]}}" :: Maybe Problem
-Just (Problem {hole = [Point {x = 10, y = 20},Point {x = 30, y = 40},Point {x = 50, y = 60}], figure = Figure {edges = [Edge {s = 1, e = 2},Edge {s = 3, e = 4}], vertices = [Point {x = 5, y = 6}]}, epsilon = 1500})
+>>> decode "{\"bonuses\":[{\"bonus\":\"GLOBALIST\",\"problem\":35,\"position\":[62,46]}],\"epsilon\":1500,\"hole\":[[10,20],[30,40],[50,60]],\"figure\":{\"edges\":[[1,2],[3,4]],\"vertices\":[[5,6]]}}" :: Maybe Problem
+Just (Problem {bonuses = Just [BonusDef {position = Point {x = 62, y = 46}, bonus = GLOBALIST, problem = 35}], hole = [Point {x = 10, y = 20},Point {x = 30, y = 40},Point {x = 50, y = 60}], figure = Figure {edges = [Edge {s = 1, e = 2},Edge {s = 3, e = 4}], vertices = [Point {x = 5, y = 6}]}, epsilon = 1500})
 -}
 instance FromJSON Problem where
   parseJSON = genericParseJSON defaultOptions
@@ -150,7 +186,8 @@ instance FromJSON Problem where
 >>> :set -XDuplicateRecordFields
 >>> let h =  [Point 10 20, Point 30 40, Point 50 60]
 >>> let f = Figure { edges = [Edge 1 2, Edge 3 4], vertices = [Point 5 6] }
->>> let expected = Problem { hole = h, figure = f, epsilon = 1500 }
+>>> let b = Just [BonusDef {position = Point {x = 62, y = 46}, bonus = GLOBALIST, problem = 35}]
+>>> let expected = Problem { bonuses = b, hole = h, figure = f, epsilon = 1500 }
 >>> let jsn = encode expected
 >>> Just expected == decode jsn
 True
@@ -160,12 +197,24 @@ instance ToJSON Problem where
   -- toJSON (Problem h f e) = object [ "hole" .= h, "figure" .= f, "epsilon" .= e ]
 
 
-data Pose = Pose { vertices :: [Point] } deriving (Show, Eq, Generic)
+data BonusUse =
+  BonusUse
+  { bonus :: BonusType
+  , problem :: Int
+  } deriving (Show, Eq, Generic)
+
+instance FromJSON BonusUse where
+  parseJSON = genericParseJSON defaultOptions
+
+instance ToJSON BonusUse where
+  toJSON = genericToJSON defaultOptions
+
+data Pose = Pose { bonuses :: Maybe [BonusUse], vertices :: [Point] } deriving (Show, Eq, Generic)
 
 {- |
 >>> :set -XOverloadedStrings
->>> decode "{\"vertices\":[[1,2],[3,4]]}" :: Maybe Pose
-Just (Pose {vertices = [Point {x = 1, y = 2},Point {x = 3, y = 4}]})
+>>> decode "{\"bonuses\":[{\"bonus\":\"GLOBALIST\",\"problem\":35}],\"vertices\":[[1,2],[3,4]]}" :: Maybe Pose
+Just (Pose {bonuses = Just [BonusUse {bonus = GLOBALIST, problem = 35}], vertices = [Point {x = 1, y = 2},Point {x = 3, y = 4}]})
 -}
 instance FromJSON Pose where
   parseJSON = genericParseJSON defaultOptions
@@ -175,8 +224,8 @@ instance FromJSON Pose where
    -}
 
 {- |
->>> encode $ Pose [Point 1 2, Point 3 4]
-"{\"vertices\":[[1,2],[3,4]]}"
+>>> encode $ Pose (Just [BonusUse GLOBALIST 35]) [Point 1 2, Point 3 4]
+"{\"bonuses\":[{\"bonus\":\"GLOBALIST\",\"problem\":35}],\"vertices\":[[1,2],[3,4]]}"
 -}
 instance ToJSON Pose where
   toJSON = genericToJSON defaultOptions
