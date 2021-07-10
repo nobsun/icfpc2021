@@ -91,6 +91,7 @@ tests:
     other-modules:
     - LibSpec
     - HoleSpec
+    - ScoreSpec
     source-dirs:         test
     # ghc-options:
     # - -threaded
