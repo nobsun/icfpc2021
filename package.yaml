@@ -23,12 +23,12 @@ dependencies:
 - base >= 4.7 && < 5
 - bytestring
 - filepath
-- utf8-string
-- unicode-show
 
 library:
   source-dirs: src
   dependencies:
+  - utf8-string
+  - unicode-show
   - aeson
   - fgl
 
@@ -97,6 +97,8 @@ tests:
     - icfpc2021
     - hspec
     - main-tester
+    # - utf8-string
+    # - unicode-show
 
   icfpc2021-doctest:
     main:                doctests.hs
