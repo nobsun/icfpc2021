@@ -30,15 +30,6 @@ import AesonArrayGeneric
   (genericParseArrayJSON, defaultAesonArrayOptions, genericToArrayJSON)
 
 
--- | data/problems/001.json をパースして Problem にして印字する
---   TODO: サンプルなので API を作ったら破棄して OK です
-_test001 :: IO ()
-_test001 = do
-  maybeProblem <- readProblem "data/problems/001.json"
-  case maybeProblem of
-    Just val -> print val
-    Nothing  -> putStrLn "fail to decode."
-
 readProblem :: FilePath -> IO (Maybe Problem)
 readProblem fp = decode <$> LBS.readFile fp
 
