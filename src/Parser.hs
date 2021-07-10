@@ -2,7 +2,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# OPTIONS -Wno-name-shadowing #-}
@@ -154,7 +153,6 @@ instance FromJSON Figure where
    -}
 
 {- |
->>> :set -XDuplicateRecordFields
 >>> let expected = Figure { edges = [Edge 1 2, Edge 3 4], vertices = [Point 5 6] }
 >>> let jsn = encode expected
 >>> Just expected == decode jsn
@@ -184,7 +182,6 @@ instance FromJSON Problem where
    -}
 
 {- |
->>> :set -XDuplicateRecordFields
 >>> let h =  [Point 10 20, Point 30 40, Point 50 60]
 >>> let f = Figure { edges = [Edge 1 2, Edge 3 4], vertices = [Point 5 6] }
 >>> let b = Just [BonusDef {position = Point {x = 62, y = 46}, bonus = GLOBALIST, problem = 35}]
