@@ -1,14 +1,19 @@
 {-# LANGUAGE MultiWayIf #-}
-module Segment 
+module Segment
   ( intersect
   , dist
   , (×)
   , (·)
   ) where
 
+<<<<<<< HEAD
 import Graph ( GSegment, GridPoint )
+=======
+import Prelude hiding (pi)
+import Graph
+>>>>>>> 906171d925424859c80b040a4291c5057f39a422
 
-{- | 交差判定 
+{- | 交差判定
 >>> a = (0,0)
 >>> b = (6,8)
 >>> c = (0,8)
@@ -36,7 +41,7 @@ intersect (p1, p2) (p3, p4)
     d2 = direction p3 p4 p2
     d3 = direction p1 p2 p3
     d4 = direction p1 p2 p4
-  
+
 -- | 外積
 (×) :: (Int, Int) -> (Int, Int) -> Int
 (xa, ya) × (xb, yb) = xa * yb - xb * ya
@@ -58,7 +63,5 @@ dist :: GSegment -> Int
 dist (a, b) = ab · ab
   where
     ab = b − a 
-
--- | 内積
 (·) :: (Int, Int) -> (Int, Int) -> Int
 (xa, ya) · (xb, yb) = xa * xb + ya * yb

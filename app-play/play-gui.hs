@@ -6,14 +6,20 @@ import Control.Concurrent.STM    (TQueue, atomically, newTQueueIO, tryReadTQueue
 import Control.Exception
 import Control.Monad             (foldM, liftM, unless, when, void)
 import Control.Monad.RWS.Strict  (RWST, ask, asks, evalRWST, get, liftIO, modify, put)
-import Data.Maybe                (catMaybes, isJust, fromJust)
+import Data.List                 (elemIndex)
+import Data.Maybe                (catMaybes, isJust, fromJust, listToMaybe)
 import Data.IntMap.Lazy (IntMap)
 import qualified Data.IntMap.Lazy          as IntMap
+import qualified Data.Map                  as Map
 import Options.Applicative
 import System.IO
 
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.UI.GLFW          as GLFW
+
+
+import qualified Solver.BackTracking as Bk
+
 
 
 --------------------------------------------------------- -----------------------
@@ -35,6 +41,8 @@ data State = State
     , stateVertices        :: [(Int, Int)]
     , stateEpsilon         :: !Int
     , stateDislike         :: !Int
+    , stateSelectedNode    :: Maybe Int
+    , stateBk              :: Bk.Bk
     , stateHistory         :: [(Int, Int)]
     }
 
@@ -126,6 +134,8 @@ main = do
               , envWindow        = win
               , envOptions       = opt
               }
+            es = [(2, 5), (5, 4), (4, 1), (1, 0), (0, 8), (8, 3), (3, 7),(7, 11), (11, 13), (13, 12), (12, 18), (18, 19), (19, 14),(14, 15), (15, 17), (17, 16), (16, 10), (10, 6), (6, 2),(8, 12), (7, 9), (9, 3), (8, 9), (9, 12), (13, 9), (9, 11),(4, 8), (12, 14), (5, 10), (10, 15)]
+            vs = [(20, 30), (20, 40), (30, 95), (40, 15), (40, 35), (40, 65),(40, 95), (45, 5), (45, 25), (50, 15), (50, 70), (55, 5),(55, 25), (60, 15), (60, 35), (60, 65), (60, 95), (70, 95),(80, 30), (80, 40)]
             state_ = State
               { stateWindowWidth     = winWidth
               , stateWindowHeight    = winHeight
@@ -133,10 +143,12 @@ main = do
               , stateFBHeight        = fbHeight
               , statePoint           = Nothing
               , stateHole            = [(55, 80), (65, 95), (95, 95), (35, 5), (5, 5), (35, 50), (5, 95), (35, 95), (45, 80)] -- lamda (sample)
-              , stateEdges           = [(2, 5), (5, 4), (4, 1), (1, 0), (0, 8), (8, 3), (3, 7),(7, 11), (11, 13), (13, 12), (12, 18), (18, 19), (19, 14),(14, 15), (15, 17), (17, 16), (16, 10), (10, 6), (6, 2),(8, 12), (7, 9), (9, 3), (8, 9), (9, 12), (13, 9), (9, 11),(4, 8), (12, 14), (5, 10), (10, 15)]
-              , stateVertices        = [(20, 30), (20, 40), (30, 95), (40, 15), (40, 35), (40, 65),(40, 95), (45, 5), (45, 25), (50, 15), (50, 70), (55, 5),(55, 25), (60, 15), (60, 35), (60, 65), (60, 95), (70, 95),(80, 30), (80, 40)]
+              , stateEdges           = es
+              , stateVertices        = vs
               , stateEpsilon         = 1
               , stateDislike         = 0
+              , stateSelectedNode    = Nothing
+              , stateBk              = Bk.mkBk vs es
               , stateHistory         = []
               }
 
@@ -281,10 +293,25 @@ processEvent ev =
                   height = stateWindowHeight state
                   x' = ((round x-(width`div`2))*2*sizeX)`div`width
                   y' = ((round y-(height`div`2))*2*sizeY)`div`height-- because GL.ortho (-sizeX) (sizeX)
+                  bk = stateBk state
+                  vs = stateVertices state
+                  (sel,bk',vs') =
+                      case (stateSelectedNode state, (x',y')`nearElemIndex`vs) of
+                        (Nothing, Nothing) -> (Nothing, bk, vs)
+                        (Nothing, Just n)  -> (Just n, bk, vs)
+                        (Just n, _)  -> case Bk.move bk n (x',y') of
+                                          Nothing -> (Nothing, bk, vs)
+                                          Just bk'-> (Nothing, bk', Map.elems (Bk.vertices bk'))
               modify $ \s -> s
                 { statePoint = Just (x', y')
+                , stateSelectedNode = sel
+                , stateBk = bk'
+                , stateVertices = vs'
                 }
               printEvent "mouse clicked" [show x', show y']
+              printEvent "selected" [show sel]
+              printEvent "vertices" [show vs']
+              draw
 
       (EventCursorPos _ x y) -> do
           state <- get
@@ -292,7 +319,7 @@ processEvent ev =
               height = stateWindowHeight state
               x' = ((round x-(width`div`2))*2*sizeX)`div`width
               y' = ((round y-(height`div`2))*2*sizeY)`div`height
-          printEvent "cursor pos" [show x', show y']
+          --printEvent "cursor pos" [show x', show y']
           win <- asks envWindow
           liftIO $ GLFW.setWindowTitle win $ "ICFPc 2021: cursor = " ++ show (x', y')
 
@@ -307,8 +334,25 @@ processEvent ev =
       (EventKey _win k scancode ks mk) -> do
           printEvent "key" [show k, show scancode, show ks, showModifierKeys mk]
 
-      (EventChar _ c) ->
+      (EventChar _ c) -> do
+          state <- get
+          let (dx,dy) = case c of
+                       'a' -> (-1, 0)
+                       'd' -> ( 1, 0)
+                       'w' -> ( 0,-1)
+                       's' -> ( 0, 1)
+              vs' = [(x+dx,y+dy) | (x,y) <-stateVertices state]
+          modify $ \s -> s
+            { stateVertices = vs'
+            }
           printEvent "char" [show c]
+          printEvent "vertices" [show vs']
+          draw
+
+
+nearElemIndex :: (Int,Int) -> [(Int,Int)] -> Maybe Int
+nearElemIndex (x,y) as =
+  listToMaybe $ catMaybes [(x+dx, y+dy)`elemIndex`as | dx<-[-2,-1..2], dy<-[-2,-1..2]]
 
 adjustWindow :: Demo ()
 adjustWindow = do
@@ -330,7 +374,8 @@ draw = do
     state <- get
     liftIO $ do
       GL.clear [GL.ColorBuffer, GL.DepthBuffer]
-      GL.renderPrimitive GL.Polygon $ mapM_ (GL.vertex . toV) (stateHole state)
+      GL.color (GL.Color3 1 1 1 :: GL.Color3 GL.GLfloat)
+      GL.renderPrimitive GL.LineLoop $ mapM_ (GL.vertex . toV) (stateHole state)
       GL.color (GL.Color3 0.7 0 0 :: GL.Color3 GL.GLfloat)
       GL.renderPrimitive GL.Lines $ mapM_ GL.vertex (edgeToV (stateVertices state) (stateEdges state))
       GLFW.swapBuffers (envWindow env)

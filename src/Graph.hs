@@ -4,7 +4,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-module Graph 
+{-# OPTIONS -Wno-unused-top-binds #-}
+module Graph
   ( GridPoint
   , GSegment
   , GVertex
