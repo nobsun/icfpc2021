@@ -1,11 +1,11 @@
 {-# LANGUAGE MultiWayIf #-}
-module Segment 
+module Segment
   ( intersect
   ) where
 
 import Graph
 
-{- | 交差判定 
+{- | 交差判定
 >>> a = (0,0)
 >>> b = (6,8)
 >>> c = (0,8)
@@ -33,7 +33,7 @@ intersect (p1, p2) (p3, p4)
     d2 = direction p3 p4 p2
     d3 = direction p1 p2 p3
     d4 = direction p1 p2 p4
-  
+
 
 (×) :: (Int, Int) -> (Int, Int) -> Int
 (xa, ya) × (xb, yb) = xa * yb - xb * ya
