@@ -363,7 +363,7 @@ draw = do
     liftIO $ do
       GL.clear [GL.ColorBuffer, GL.DepthBuffer]
       GL.color (GL.Color3 1 1 1 :: GL.Color3 GL.GLfloat)
-      GL.renderPrimitive GL.Polygon $ mapM_ (GL.vertex . toV) (stateHole state)
+      GL.renderPrimitive GL.LineLoop $ mapM_ (GL.vertex . toV) (stateHole state)
       GL.color (GL.Color3 0.7 0 0 :: GL.Color3 GL.GLfloat)
       GL.renderPrimitive GL.Lines $ mapM_ GL.vertex (edgeToV (stateVertices state) (stateEdges state))
       GLFW.swapBuffers (envWindow env)
