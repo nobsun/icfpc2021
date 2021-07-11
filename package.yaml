@@ -85,6 +85,7 @@ executables:
           - pretty
           - stm
           - transformers
+          - random
         else:
           buildable: false
       - condition: flag(static)
