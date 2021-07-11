@@ -172,17 +172,18 @@ assertIsInside (x', y') hole = do
     y1' <- Z3.mkIntNum y1
     x2' <- Z3.mkIntNum x2
     y2' <- Z3.mkIntNum y2
-    cond1 <- case compare y1 y2 of
-               EQ -> Z3.mkEq y1' y'
-               LT -> Z3.mkAnd =<< sequence [Z3.mkLe y1' y', Z3.mkLt y' y2']
-               GT -> Z3.mkAnd =<< sequence [Z3.mkLe y2' y', Z3.mkLt y' y1']
-    cond2 <-
+    cond <-
       if y1 == y2 then
-        Z3.mkAnd =<< sequence (if x1 <= x2 then [Z3.mkLe x1' x', Z3.mkLe x' x2'] else [Z3.mkLe x2' x', Z3.mkLe x' x1'])
+        Z3.mkFalse
       else do
+        cond1 <-
+          if y1 < y2 then
+            Z3.mkAnd =<< sequence [Z3.mkLe y1' y', Z3.mkLt y' y2']
+          else
+            Z3.mkAnd =<< sequence [Z3.mkLe y2' y', Z3.mkLt y' y1']
         rhs <- Z3.mkAdd =<< sequence [pure x1', Z3.mkMul =<< sequence [Z3.mkSub [y', y1'], Z3.mkRational (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))]]
-        Z3.mkLt x' rhs
-    cond <- Z3.mkAnd [cond1, cond2]
+        cond2 <- Z3.mkLt x' rhs
+        Z3.mkAnd [cond1, cond2]
     Z3.mkIte cond one zero
 
   cp <- Z3.mkAdd cpTerms
