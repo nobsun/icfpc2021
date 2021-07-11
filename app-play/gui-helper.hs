@@ -383,27 +383,32 @@ processEvent ev =
           case c of
             'p' -> do
               poseInfo@PoseInfo{poseVertexInfo} <- gets statePose
-              let x = A.encode $ poseOfPoseInfo poseInfo
-              liftIO $ BLC.putStrLn x
+              liftIO $ BLC.putStrLn $ A.encode $ poseOfPoseInfo poseInfo
+            'a' -> movePose (-1, 0, 1 ,1)
+            'd' -> movePose ( 1, 0, 1, 1)
+            'w' -> movePose ( 0,-1, 1, 1)
+            's' -> movePose ( 0, 1, 1, 1)
+            'x' -> movePose ( 0, 0,-1, 1)
+            'y' -> movePose ( 0, 0, 1,-1)
+            'r' -> rotatePose
             _ -> pure ()
-          -- state <- get
-          -- let (dx,dy,mx,my) = case c of
-          --              'a' -> (-1, 0, 1 ,1)
-          --              'd' -> ( 1, 0, 1, 1)
-          --              'w' -> ( 0,-1, 1, 1)
-          --              's' -> ( 0, 1, 1, 1)
-          --              'x' -> ( 0, 0,-1, 1)
-          --              'y' -> ( 0, 0, 1,-1)
-          --              _   -> ( 0, 0, 1, 1)
-          --     P.Pose b vs = statePose state
-          --     vs' = if c=='r' then map rotate vs
-          --                     else [P.Point (mx*(x+dx)) (my*(y+dy)) | P.Point x y <-vs]
-          -- modify $ \s -> s
-          --   { statePose = P.Pose b vs'
-          --   }
-          -- printEvent "char" [show c]
-          -- printEvent "vertices" [show vs']
-          -- draw
+        where
+          movePose (dx,dy,mx,my) = do
+            problem <- asks envProblem
+            P.Pose b vs <- gets (poseOfPoseInfo . statePose)
+            let vs' = [P.Point (mx*(x+dx)) (my*(y+dy)) | P.Point x y <-vs]
+                newPose = P.Pose b vs'
+                newPoseInfo = PoseInfo.verifyPose problem newPose
+            modify $ \s -> s { statePose = newPoseInfo }
+            draw
+          rotatePose = do
+            problem <- asks envProblem
+            P.Pose b vs <- gets (poseOfPoseInfo . statePose)
+            let vs' = map rotatePoint vs
+                newPose = P.Pose b vs'
+                newPoseInfo = PoseInfo.verifyPose problem newPose
+            modify $ \s -> s { statePose = newPoseInfo }
+            draw
 
 nearestVertex :: (Int, Int) -> [PoseVertexInfo] -> PoseVertexInfo
 nearestVertex (x,y) ps = minimumBy (compare `on` distance) ps
@@ -421,8 +426,8 @@ getCursorPos = do
   let y' = ((round y-(height`div`2))*2*sizeY)`div`height-- because GL.ortho (-sizeX) (sizeX)
   pure (x', y')
 
-rotate :: P.Point -> P.Point
-rotate (P.Point x y) = P.Point y (-x)
+rotatePoint :: P.Point -> P.Point
+rotatePoint (P.Point x y) = P.Point y (-x)
 
 nearElemIndex :: (Int,Int) -> [(Int,Int)] -> Maybe Int
 nearElemIndex (x,y) as =
