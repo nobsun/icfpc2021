@@ -30,6 +30,7 @@ solve prob = do
     pointVars <- liftM V.fromList $ forM (zip [(0::Int)..] (V.toList vs)) $ \(i, _) -> do
       x <- Z3.mkIntVar =<< Z3.mkStringSymbol ("x" ++ show i)
       y <- Z3.mkIntVar =<< Z3.mkStringSymbol ("y" ++ show i)
+      assertIsInside (x,y) hole
       return (x,y)
 
     edgeVars <- liftM V.fromList $ forM (zip [(0::Int)..] es) $ \(i, P.Edge s t) -> do
@@ -62,10 +63,6 @@ solve prob = do
       Z3.solverAssertCnstr =<< Z3.mkLe d max_d'
 
       return (dx,dy,dx2,dy2)
-
-    forM_ (zip [0..] (V.toList vs)) $ \(i, _) -> do
-       assertIsInside (pointVars V.! i) hole
-       return ()
 
     let loop :: Int -> Z3.Z3 (Maybe (V.Vector P.Point))
         loop !k = do
