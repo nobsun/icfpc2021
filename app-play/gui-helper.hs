@@ -30,7 +30,6 @@ import           Control.Monad.RWS.Strict       ( RWST
                                                 )
 import qualified Data.Aeson                    as A
 import qualified Data.ByteString.Lazy.Char8    as BLC
-import           Data.Foldable                  ( minimumBy )
 import           Data.Function                  ( on )
 import           Data.Maybe                     ( catMaybes
                                                 , fromMaybe
@@ -60,6 +59,7 @@ import           PoseInfo                       ( PoseEdgeInfo(..)
                                                 , PoseVertexInfo(..)
                                                 )
 import qualified PoseInfo
+import Data.List
 
 --------------------------------------------------------- -----------------------
 
@@ -445,6 +445,9 @@ processEvent ev = case ev of
       modify $ \s -> s { statePose = newPoseInfo }
       draw
 
+rotatePoint :: P.Point -> P.Point
+rotatePoint (P.Point x y) = P.Point y (-x)
+
 nearestVertex :: (Int, Int) -> [PoseVertexInfo] -> PoseVertexInfo
 nearestVertex (x, y) ps = minimumBy (compare `on` distance) ps
  where
@@ -455,19 +458,19 @@ nearestEdge :: (Int, Int) -> PoseInfo -> [PoseEdgeInfo] -> PoseEdgeInfo
 nearestEdge (x, y) poseInfo es = minimumBy (compare `on` distance) es
  where
   distance e =
-    let P.Point ex ey = edgeMidPoint poseInfo e
+    let P.Point ex ey = edgeMidPoint poseInfo (edgeId e)
     in (x - ex) ^ (2 :: Int) + (y - ey) ^ (2 :: Int)
 
-edgeEndpoints :: PoseInfo -> PoseEdgeInfo -> (P.Point, P.Point)
-edgeEndpoints PoseInfo{poseVertexInfo} PoseEdgeInfo{..} =
-  let (f,t) = edgeFromTo
+edgeEndpoints :: PoseInfo -> Int -> (P.Point, P.Point)
+edgeEndpoints PoseInfo{..} eid =
+  let (f,t) = edgeFromTo (poseEdgeInfo!!eid)
       PoseVertexInfo _ p1 = poseVertexInfo!!f
       PoseVertexInfo _ p2 = poseVertexInfo!!t
   in (p1,p2)
 
-edgeMidPoint :: PoseInfo -> PoseEdgeInfo -> P.Point
-edgeMidPoint poseInfo e =
-  let (P.Point x1 y1, P.Point x2 y2) = edgeEndpoints poseInfo e
+edgeMidPoint :: PoseInfo -> Int -> P.Point
+edgeMidPoint poseInfo eid =
+  let (P.Point x1 y1, P.Point x2 y2) = edgeEndpoints poseInfo eid
   in P.Point ((x1 + x2) `div` 2) ((y1 + y2) `div` 2 )
 
 getCursorPos :: Demo (Int, Int)
@@ -478,12 +481,9 @@ getCursorPos = do
   width  <- gets stateWindowWidth
   height <- gets stateWindowHeight
   (x, y) <- liftIO $ GLFW.getCursorPos win
-  let x' = ((round x - (width `div` 2)) * 2 * sizeX) `div` width
-  let y' = ((round y - (height `div` 2)) * 2 * sizeY) `div` height-- because GL.ortho (-sizeX) (sizeX)
+  let x' = round x * (2 * _MARGIN + sizeX) `div` width  - _MARGIN
+  let y' = round y * (2 * _MARGIN + sizeY) `div` height - _MARGIN
   pure (x' `div` _Bairitsu , y' `div` _Bairitsu)
-
-rotatePoint :: P.Point -> P.Point
-rotatePoint (P.Point x y) = P.Point y (-x)
 
 adjustWindow :: Demo ()
 adjustWindow = do
@@ -498,20 +498,33 @@ adjustWindow = do
     GL.viewport GL.$= (pos, size)
     GL.matrixMode GL.$= GL.Projection
     GL.loadIdentity
-    GL.ortho (fromIntegral (-sizeX))
-             (fromIntegral sizeX)
-             (fromIntegral sizeY)
-             (fromIntegral (-sizeY))
+    GL.ortho (fromIntegral (- _MARGIN))
+             (fromIntegral (sizeX + _MARGIN))
+             (fromIntegral (sizeY + _MARGIN))
+             (fromIntegral (- _MARGIN))
              (-1.5)
              (1.5 :: GL.GLdouble)
   draw
+
+_MARGIN :: Int
+_MARGIN = 10
 
 envHole :: Env -> P.Hole
 envHole Env { envProblem = P.Problem {..} } = hole
 
 draw :: Demo ()
 draw = do
-  liftIO . PoseInfo.reportPose =<< gets statePose
+  -- [CLI]
+  PoseInfo{poseEdgeInfo} <- gets statePose
+  mEdgeId <- gets stateSelectedEdgeId
+  liftIO $ putStrLn "    edge     length   possible_range  tolerant included"
+  forM_ poseEdgeInfo $ \e -> do
+    let h | Just (edgeId e) == mEdgeId = "[*] "
+          | otherwise                  = "[ ] "
+    liftIO $ do
+      putStr h
+      PoseInfo.reportEdgeInfo e
+  -- [CLI END]
   env <- ask
   let hole = envHole env
   state <- get
@@ -541,7 +554,7 @@ draw = do
     GLFW.swapBuffers (envWindow env)
 
 drawPose :: P.Problem -> PoseInfo -> Demo ()
-drawPose P.Problem {..} poseInfo@PoseInfo {..} = do
+drawPose P.Problem {..} PoseInfo {..} = do
   mId <- gets stateSelectedEdgeId
   forM_ poseEdgeInfo $ \PoseEdgeInfo {..} -> do
     let (min', max') = possibleLengthRange
