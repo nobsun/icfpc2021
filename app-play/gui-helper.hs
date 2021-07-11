@@ -31,6 +31,7 @@ import           Control.Monad.RWS.Strict       ( RWST
 import qualified Data.Aeson                    as A
 import qualified Data.ByteString.Lazy.Char8    as BLC
 import           Data.Function                  ( on )
+import qualified Data.Map                      as Map
 import           Data.Maybe                     ( catMaybes
                                                 , fromMaybe
                                                 )
@@ -60,6 +61,7 @@ import           PoseInfo                       ( PoseEdgeInfo(..)
                                                 , PoseVertexInfo(..)
                                                 )
 import qualified PoseInfo
+import qualified Solver.BackTracking           as Bk
 import qualified TwoDim
 
 --------------------------------------------------------- -----------------------
@@ -414,6 +416,7 @@ processEvent ev = case ev of
       'r' -> rotatePose
       'f' -> fold True
       'g' -> fold False
+      't' -> tune
       '!' -> do
         probNum  <- optProblemNumber <$> asks envOptions
         poseInfo <- gets statePose
@@ -462,6 +465,16 @@ processEvent ev = case ev of
           newPoseInfo = PoseInfo.verifyPose problem newPose
         updateStatePoseInfo newPoseInfo
         draw
+    tune = do
+      problem <-asks envProblem
+      state <- get
+      let currentPose = poseOfPoseInfo (statePose state)
+          initBk = Bk.mkBk problem
+          bk = initBk{Bk.vertices=Map.fromList (zip [0..] $ map PoseInfo.pointToTuple $ P.pose'vertices currentPose)}
+          bk' = Bk.autoTuneEdges bk
+          newPose = currentPose{P.pose'vertices=map (\(x,y)->P.Point x y) $ Map.elems $ Bk.vertices bk'}
+      updateStatePoseInfo (PoseInfo.verifyPose problem newPose)
+      draw
     undo = gets stateUndoQueue >>= \case
       [] -> do
         liftIO $ putStrLn "empty undo queue"

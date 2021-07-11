@@ -15,7 +15,6 @@ import qualified Data.IntMap.Lazy          as IntMap
 import qualified Data.Map                  as Map
 import Options.Applicative
 import System.IO
-import System.Random (randomIO)
 import Text.Printf (printf)
 
 import qualified Graphics.Rendering.OpenGL as GL
@@ -374,23 +373,27 @@ processEvent ev =
 
       (EventChar _ c) -> do
           state <- get
-          let (dx,dy,mx,my) = case c of
-                       'a' -> (-1, 0, 1 ,1)
-                       'd' -> ( 1, 0, 1, 1)
-                       'w' -> ( 0,-1, 1, 1)
-                       's' -> ( 0, 1, 1, 1)
-                       'x' -> ( 0, 0,-1, 1)
-                       'y' -> ( 0, 0, 1,-1)
-                       _   -> ( 0, 0, 1, 1)
+          let bk = stateBk state
               vs = stateVertices state
-              vs' = if c=='r' then map rotate vs
-                              else [(mx*(x+dx),my*(y+dy)) | (x,y) <-vs]
+              vs' = case c of
+                       'a' -> map (move(-1, 0, 1 ,1)) vs
+                       'd' -> map (move( 1, 0, 1, 1)) vs
+                       'w' -> map (move( 0,-1, 1, 1)) vs
+                       's' -> map (move( 0, 1, 1, 1)) vs
+                       'x' -> map (move( 0, 0,-1, 1)) vs
+                       'y' -> map (move( 0, 0, 1,-1)) vs
+                       'r' -> map rotate vs
+                       _   -> let bk' = Bk.autoTuneEdges bk in Map.elems ( Bk.vertices bk')
           modify $ \s -> s
             { stateVertices = vs'
+            , stateBk = bk{Bk.vertices=Map.fromList (zip [0..] vs')}
             }
           printEvent "char" [show c]
           printEvent "vertices" [show vs']
           draw
+
+move :: (Int,Int,Int,Int) -> (Int,Int) -> (Int,Int)
+move (dx,dy,mx,my) (x,y) = (mx*(x+dx),my*(y+dy))
 
 rotate :: (Int,Int) -> (Int,Int)
 rotate (x, y) = (y, -x)
