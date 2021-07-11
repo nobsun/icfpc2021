@@ -56,8 +56,6 @@ import           PoseInfo                       ( PoseEdgeInfo(..)
                                                 , PoseVertexInfo(..)
                                                 )
 import qualified PoseInfo
-import Graphics.Rendering.MiniTypeset
-import qualified Graphics.Rendering.MiniTypeset.Document as Document
 
 --------------------------------------------------------- -----------------------
 
@@ -484,21 +482,8 @@ draw = do
         $ mapM_ (GL.vertex . toV) (Hole.innerPoints hole)
     -- [figure]
     drawPose (envProblem env) (statePose state)
-    -- drawString "hello"
     -- [end]
     GLFW.swapBuffers (envWindow env)
-
-drawString :: String -> IO ()
-drawString s = do
-  fonts <- liftIO $ newMultiFont UserFontConfig
-    { _ufcFontFiles = id
-    , _ufcCharMap = \_ _ -> "/home/hogeyama/.fonts/sarasa-bold.ttc"
-    , _ufcStyleMap = id
-    , _ufcLineGapFactor = 1
-    }
-  let doc = Document.String s :: Document String
-  x <- liftIO $ createLayout fonts (Height 20) doc
-  liftIO $ renderLayout x (Pos 50 50)
 
 drawPose :: P.Problem -> PoseInfo -> IO ()
 drawPose P.Problem {..} PoseInfo {..} = do

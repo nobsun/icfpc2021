@@ -116,7 +116,6 @@ executables:
           - stm
           - transformers
           - text
-          - minitypeset-opengl
         else:
           buildable: false
       - condition: flag(static)

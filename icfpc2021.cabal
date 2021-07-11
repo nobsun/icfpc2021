@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: eaf14a5d6c2410956d34abc4f8170b44874c4a61e4afc81f9af4a50554a3d852
+-- hash: eb858f9d6f0d010c0bbee3fdbe9e0825175f0c2c47ee60abba79a1f2de6c042d
 
 name:           icfpc2021
 version:        0.1.0.0
@@ -88,7 +88,6 @@ executable gui-helper
       , bytestring
       , containers
       , icfpc2021
-      , minitypeset-opengl
       , mtl
       , optparse-applicative
       , pretty
