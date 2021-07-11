@@ -37,7 +37,10 @@ import           Data.Maybe                     ( catMaybes
 import           Data.StateVar                  ( ($=) )
 import           Options.Applicative
 import           System.IO                      ( hPutStrLn
+                                                , stdout
                                                 , stderr
+                                                , hSetBuffering
+                                                , BufferMode (LineBuffering)
                                                 )
 import           Text.Printf                    ( printf )
 
@@ -154,6 +157,9 @@ main = do
       maximum (concat [ [x, y] | P.Point x y <- P.hole problem ]) `div` 10 * 15
 
   eventsChan <- newTQueueIO :: IO (TQueue Event)
+
+  hSetBuffering stdout LineBuffering
+  hSetBuffering stderr LineBuffering
 
   withWindow width height "ICFPc 2021" $ \win -> do
     GLFW.setErrorCallback $ Just $ errorCallback eventsChan
@@ -549,4 +555,3 @@ poseOfPoseInfo PoseInfo { poseVertexInfo } = P.Pose Nothing vs
 updatePosOf :: Int -> P.Point -> P.Pose -> P.Pose
 updatePosOf vertexId newPos (P.Pose b vs) =
   let (xs, _ : ys) = splitAt vertexId vs in P.Pose b $ xs ++ newPos : ys
-
