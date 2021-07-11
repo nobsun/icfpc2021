@@ -30,7 +30,9 @@ solve prob = do
     pointVars <- liftM V.fromList $ forM (zip [(0::Int)..] (V.toList vs)) $ \(i, _) -> do
       x <- Z3.mkIntVar =<< Z3.mkStringSymbol ("x" ++ show i)
       y <- Z3.mkIntVar =<< Z3.mkStringSymbol ("y" ++ show i)
-      assertIsInside (x,y) hole
+      x' <- Z3.mkInt2Real x
+      y' <- Z3.mkInt2Real y
+      assertIsInside (x',y') hole
       return (x,y)
 
     edgeVars <- liftM V.fromList $ forM (zip [(0::Int)..] es) $ \(i, P.Edge s t) -> do
@@ -160,9 +162,8 @@ assertIsInside (x', y') hole = do
       if y1 == y2 then
         Z3.mkAnd =<< sequence (if x1 <= x2 then [Z3.mkLe x1' x', Z3.mkLe x' x2'] else [Z3.mkLe x2' x', Z3.mkLe x' x1'])
       else do
-        lhs <- Z3.mkInt2Real x'
-        rhs <- Z3.mkAdd =<< sequence [Z3.mkInt2Real x1', Z3.mkMul =<< sequence [Z3.mkInt2Real =<< Z3.mkSub [y', y1'], Z3.mkRational (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))]]
-        Z3.mkEq lhs rhs
+        rhs <- Z3.mkAdd =<< sequence [pure x1', Z3.mkMul =<< sequence [Z3.mkSub [y', y1'], Z3.mkRational (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))]]
+        Z3.mkEq x' rhs
     cond <- Z3.mkAnd [cond1, cond2]
     return cond
 
@@ -179,9 +180,8 @@ assertIsInside (x', y') hole = do
       if y1 == y2 then
         Z3.mkAnd =<< sequence (if x1 <= x2 then [Z3.mkLe x1' x', Z3.mkLe x' x2'] else [Z3.mkLe x2' x', Z3.mkLe x' x1'])
       else do
-        lhs <- Z3.mkInt2Real x'
-        rhs <- Z3.mkAdd =<< sequence [Z3.mkInt2Real x1', Z3.mkMul =<< sequence [Z3.mkInt2Real =<< Z3.mkSub [y', y1'], Z3.mkRational (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))]]
-        Z3.mkLt lhs rhs
+        rhs <- Z3.mkAdd =<< sequence [pure x1', Z3.mkMul =<< sequence [Z3.mkSub [y', y1'], Z3.mkRational (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))]]
+        Z3.mkLt x' rhs
     cond <- Z3.mkAnd [cond1, cond2]
     Z3.mkIte cond one zero
 
