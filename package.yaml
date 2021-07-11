@@ -65,6 +65,7 @@ executables:
   play-gui:
     main:                play-gui.hs
     source-dirs:         app-play
+    other-modules:       []
     ghc-options:
     - -rtsopts
     - -threaded
@@ -89,8 +90,8 @@ executables:
       - condition: flag(static)
         ghc-options: -static
 
-  semi-auto:
-    main:                semi-auto.hs
+  gui-helper:
+    main:                gui-helper.hs
     other-modules:       []
     source-dirs:         app-play
     ghc-options:
