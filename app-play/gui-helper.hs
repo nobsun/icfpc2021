@@ -13,6 +13,8 @@ import qualified Data.Aeson                as A
 import Data.List                 (elemIndex)
 import Data.Maybe                (catMaybes, isJust, fromJust, listToMaybe, fromMaybe)
 import Data.IntMap.Lazy          (IntMap)
+import qualified Data.ByteString.Lazy.Char8 as BLC
+import qualified Data.Text as T
 import qualified Data.IntMap.Lazy          as IntMap
 import qualified Data.Map                  as Map
 import Options.Applicative
@@ -377,7 +379,13 @@ processEvent ev =
           printEvent "key" [show k, show scancode, show ks, showModifierKeys mk]
 
       (EventChar _ c) -> do
-          pure ()
+          printEvent "char" [show c]
+          case c of
+            'p' -> do
+              poseInfo@PoseInfo{poseVertexInfo} <- gets statePose
+              let x = A.encode $ poseOfPoseInfo poseInfo
+              liftIO $ BLC.putStrLn x
+            _ -> pure ()
           -- state <- get
           -- let (dx,dy,mx,my) = case c of
           --              'a' -> (-1, 0, 1 ,1)

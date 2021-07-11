@@ -103,6 +103,7 @@ executables:
           buildable: true
           dependencies:
           - icfpc2021
+          - bytestring
           - containers
           - process
           - GLFW-b
@@ -111,9 +112,10 @@ executables:
           - mtl
           - optparse-applicative
           - pretty
+          - StateVar
           - stm
           - transformers
-          - StateVar
+          - text
         else:
           buildable: false
       - condition: flag(static)

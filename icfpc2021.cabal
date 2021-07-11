@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b3add2f4acf57de4f72843894b89d818bf85c979168026d2b3c52ce06fd0f36d
+-- hash: 8f8ebe01e2a65d91678b062b69f626aa5ee6765f0e57aa1e961d3968181e8cdb
 
 name:           icfpc2021
 version:        0.1.0.0
@@ -84,6 +84,7 @@ executable gui-helper
       , OpenGL
       , StateVar
       , base
+      , bytestring
       , containers
       , icfpc2021
       , mtl
@@ -91,6 +92,7 @@ executable gui-helper
       , pretty
       , process
       , stm
+      , text
       , transformers
     buildable: True
   else
