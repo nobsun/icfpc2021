@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 738e27fa2e79b30171467fbae6486c84b25951469188a43771e7735b10188074
+-- hash: bf51c899bfd19de848103c50ecbfaacd703458428f6e0aa5d14ab9d52abcacc0
 
 name:           icfpc2021
 version:        0.1.0.0
@@ -43,10 +43,12 @@ library
       Hole
       Parser
       PoseInfo
+      ProcessIO
       Score
       Segment
       Solver.BackTracking
       Solver.SMT
+      SubmitQueue
       TwoDim
       Types
   other-modules:
@@ -59,9 +61,12 @@ library
     , base >=4.7 && <5
     , bytestring
     , containers
+    , directory
     , fgl
     , filepath
     , mtl
+    , process
+    , time
     , transformers
     , unicode-show
     , utf8-string

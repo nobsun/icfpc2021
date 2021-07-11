@@ -36,6 +36,9 @@ library:
   - vector
   - z3
   - mtl
+  - time
+  - directory
+  - process
   ## - toysolver
   ghc-options: -Wall
 
