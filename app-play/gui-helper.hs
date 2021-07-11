@@ -59,6 +59,7 @@ import           PoseInfo                       ( PoseEdgeInfo(..)
                                                 , PoseVertexInfo(..)
                                                 )
 import qualified PoseInfo
+import qualified TwoDim
 import Data.List
 
 --------------------------------------------------------- -----------------------
@@ -426,6 +427,8 @@ processEvent ev = case ev of
       'x' -> movePose (0, 0, -1, 1)
       'y' -> movePose (0, 0, 1, -1)
       'r' -> rotatePose
+      'f' -> fold True
+      'g' -> fold False
       _   -> pure ()
    where
     movePose (dx, dy, mx, my) = do
@@ -444,9 +447,42 @@ processEvent ev = case ev of
           newPoseInfo = PoseInfo.verifyPose problem newPose
       modify $ \s -> s { statePose = newPoseInfo }
       draw
+    fold b = gets stateSelectedEdgeId >>= \case
+      Nothing -> pure ()
+      Just eid -> do
+        problem     <- asks envProblem
+        poseInfo <- gets statePose
+        let (v1,v2) = edgeEndpoints poseInfo eid
+            overTheEdge (P.Point x y) =
+              let P.Point x1 y1 = v1
+                  P.Point x2 y2 = v2
+              in if b then TwoDim.line ((x1,y1),(x2,y2)) (x,y) > 0
+                      else TwoDim.line ((x1,y1),(x2,y2)) (x,y) < 0
+            P.Pose bonus vs = poseOfPoseInfo poseInfo
+            vs' = flip map vs $ \v ->
+              if overTheEdge v
+              then foldPointAgainst (v1,v2) v
+              else v
+            newPose = P.Pose bonus vs'
+            newPoseInfo = PoseInfo.verifyPose problem newPose
+        modify $ \s -> s { statePose = newPoseInfo }
+        draw
 
 rotatePoint :: P.Point -> P.Point
 rotatePoint (P.Point x y) = P.Point y (-x)
+
+-- 格子点なので正確にはならない
+foldPointAgainst :: (P.Point, P.Point) -> P.Point -> P.Point
+foldPointAgainst (p1, p2) p =
+  let P.Point x1 y1 = p1
+      P.Point x2 y2 = p2
+      a = y2-y1
+      b = - (x2-x1)
+      c = - x1 * (y2 - y1) + y1 * (x2 - x1)
+      P.Point x y = p
+      x' = (- (a*a - b*b) * x - 2 * a * b * y - 2 * c * a) `div` (a*a + b*b)
+      y' = (  (a*a - b*b) * y - 2 * a * b * x - 2 * b * c) `div` (a*a + b*b)
+  in P.Point x' y'
 
 nearestVertex :: (Int, Int) -> [PoseVertexInfo] -> PoseVertexInfo
 nearestVertex (x, y) ps = minimumBy (compare `on` distance) ps
@@ -515,8 +551,9 @@ envHole Env { envProblem = P.Problem {..} } = hole
 draw :: Demo ()
 draw = do
   -- [CLI]
-  PoseInfo{poseEdgeInfo} <- gets statePose
+  PoseInfo{poseEdgeInfo, poseDislikes} <- gets statePose
   mEdgeId <- gets stateSelectedEdgeId
+  liftIO $ putStrLn $ "dislikes: " <> show poseDislikes
   liftIO $ putStrLn "    edge     length   possible_range  tolerant included"
   forM_ poseEdgeInfo $ \e -> do
     let h | Just (edgeId e) == mEdgeId = "[*] "
