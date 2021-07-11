@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: bf51c899bfd19de848103c50ecbfaacd703458428f6e0aa5d14ab9d52abcacc0
+-- hash: 746ff07a830c2a82c7b63c6d6dcdf4d4954901451e034c01d79cfa7c4d47e60d
 
 name:           icfpc2021
 version:        0.1.0.0
@@ -155,6 +155,19 @@ executable submit
     , mtl
     , optparse-applicative
     , text
+  default-language: Haskell2010
+
+executable submit-gateway
+  main-is: gateway.hs
+  hs-source-dirs:
+      app
+  ghc-options: -rtsopts -threaded
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , filepath
+    , icfpc2021
   default-language: Haskell2010
 
 test-suite icfpc2021-doctest

@@ -129,6 +129,16 @@ executables:
     - mtl
     - text
 
+  submit-gateway:
+    main:                gateway.hs
+    source-dirs:         app
+    other-modules:       []
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    dependencies:
+    - icfpc2021
+
 tests:
   icfpc2021-test:
     main:                spec.hs
