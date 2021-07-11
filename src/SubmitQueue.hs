@@ -20,7 +20,7 @@ import Text.Printf (printf)
 import System.IO
   (stdout, BufferMode (LineBuffering), hSetBuffering, hGetContents,
    IOMode (ReadMode), withFile, hGetLine)
-import System.FilePath ((</>), (<.>), dropExtension)
+import System.FilePath ((</>), (<.>), dropExtensions)
 import System.Directory (doesFileExist, renameFile)
 import System.Process (rawSystem, runInteractiveProcess)
 
@@ -71,7 +71,7 @@ waitRequest putLog_ qmRef = do
       process req = case req of
         [_d, _ev, fn]
           | ".json" `isSuffixOf` fn
-          , let name = dropExtension fn
+          , let name = dropExtensions fn  -- hack to handle pattern like <problemID>.xxxx.json
           , all isDigit name
           , (problemId, ""):_ <- reads name  -> enqueue problemId fn
         [_d, _ev, fn]                        -> putLogLn $ "unknown filename pattern. ignored: " ++ fn
