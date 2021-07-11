@@ -435,8 +435,9 @@ processEvent ev = case ev of
       draw
     rotatePose = do
       problem     <- asks envProblem
-      P.Pose b vs <- gets (poseOfPoseInfo . statePose)
-      let vs'         = map rotatePoint vs
+      pose@(P.Pose b vs) <- gets (poseOfPoseInfo . statePose)
+      let cp          = PoseInfo.centerPos pose
+          vs'         = map (rotatePoint cp) vs
           newPose     = P.Pose b vs'
           newPoseInfo = PoseInfo.verifyPose problem newPose
       updateStatePoseInfo newPoseInfo
@@ -486,8 +487,8 @@ processEvent ev = case ev of
                 }
         draw
 
-rotatePoint :: P.Point -> P.Point
-rotatePoint (P.Point x y) = P.Point y (-x)
+rotatePoint :: P.Point -> P.Point -> P.Point
+rotatePoint (P.Point cx cy) (P.Point x y) = P.Point (y-cy+cx) (-(x-cx)+cy)
 
 -- 格子点なので正確にはならない
 foldPointAgainst :: (P.Point, P.Point) -> P.Point -> P.Point

@@ -123,3 +123,9 @@ dislike hole Pose{pose'vertices}= Score.dislike (hole',pose')
   where
     hole' = map pointToTuple hole
     pose' = map pointToTuple pose'vertices
+
+centerPos :: P.Pose -> Point
+centerPos Pose{pose'vertices} =
+  P.Point (center (map P.x pose'vertices)) (center (map P.y pose'vertices))
+  where
+    center ps = sum ps `div` length ps
