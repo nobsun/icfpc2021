@@ -11,7 +11,7 @@ gui: icfpc2021.cabal
 	cabal v1-build $(jobs)
 
 check: icfpc2021.cabal
-	cabal v1-configure $(oflag) --enable-tests
+	cabal v1-configure $(oflag) -f gui --enable-tests
 	cabal v1-build $(jobs)
 	cabal v1-test
 
