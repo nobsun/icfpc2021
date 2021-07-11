@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a5f620228c3c8c6874d4ac7c94a80305c60d29a3cec706378155c450449fb5c2
+-- hash: eb858f9d6f0d010c0bbee3fdbe9e0825175f0c2c47ee60abba79a1f2de6c042d
 
 name:           icfpc2021
 version:        0.1.0.0
@@ -138,7 +138,6 @@ executable play-gui
       , optparse-applicative
       , pretty
       , process
-      , random
       , stm
       , transformers
     buildable: True

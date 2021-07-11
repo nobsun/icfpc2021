@@ -49,6 +49,7 @@ data State = State
     , stateDislike         :: !Int
     , stateSelectedNode    :: Maybe Int
     , stateBk              :: Bk.Bk
+    , stateMoveCount       :: Int
     , stateHistory         :: [(Int, Int)]
     }
 
@@ -180,6 +181,7 @@ main = do
               , stateDislike         = 0
               , stateSelectedNode    = Nothing
               , stateBk              = Bk.mkBk problem
+              , stateMoveCount       = 0
               , stateHistory         = []
               }
 
@@ -319,7 +321,6 @@ processEvent ev =
           when (mb == GLFW.MouseButton'1 && mbs == GLFW.MouseButtonState'Released) $ do
               win <- asks envWindow
               (x,y) <- liftIO $ GLFW.getCursorPos win
-              rand <- liftIO $ randomIO
               state <- get
               let width = stateWindowWidth state
                   height = stateWindowHeight state
@@ -327,11 +328,12 @@ processEvent ev =
                   y' = ((round y-(height`div`2))*2*sizeY)`div`height-- because GL.ortho (-sizeX) (sizeX)
                   bk = stateBk state
                   vs = stateVertices state
+                  count = stateMoveCount state
                   (sel,bk',vs') =
-                      case (stateSelectedNode state, (x',y')`nearElemIndex`vs) of
+                      case (stateSelectedNode state, (x',y')`nearElemIndex`(if count`mod`2==0 then vs else reverse vs)) of
                         (Nothing, Nothing) -> (Nothing, bk, vs)
                         (Nothing, Just n)  -> (Just n, bk, vs)
-                        (Just n, _)  -> case Bk.move bk rand n (x',y') of
+                        (Just n, _)  -> case Bk.move bk count n (x',y') of
                                           Nothing -> (Nothing, bk, vs)
                                           Just bk'-> (Nothing, bk', Map.elems (Bk.vertices bk'))
               modify $ \s -> s
@@ -339,6 +341,7 @@ processEvent ev =
                 , stateSelectedNode = sel
                 , stateBk = bk'
                 , stateVertices = vs'
+                , stateMoveCount = count+1
                 }
               printEvent "mouse clicked" [show x', show y']
               printEvent "selected" [show sel]
