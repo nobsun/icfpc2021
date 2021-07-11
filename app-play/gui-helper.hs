@@ -671,7 +671,7 @@ updateStatePoseInfo :: PoseInfo -> Demo ()
 updateStatePoseInfo poseInfo = do
   State { stateUndoQueue, statePose } <- get
   let currentPose  = poseOfPoseInfo statePose
-      newUndoQueue = take 100 $ currentPose : stateUndoQueue
+      newUndoQueue = take 1000 $ currentPose : stateUndoQueue
   newUndoQueue' <- liftIO $ evaluate newUndoQueue -- サンクを潰す
   modify $ \s -> s { statePose      = poseInfo
                    , stateUndoQueue = newUndoQueue'
