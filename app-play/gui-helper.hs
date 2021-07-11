@@ -1,4 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables #-} {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# OPTIONS_GHC -Wall #-}
@@ -80,11 +81,15 @@ data State = State
   , statePose             :: PoseInfo
   , stateDislike          :: !Int
   , stateSelectedVertexId :: Maybe Int
+  , stateSelectedEdgeId   :: Maybe Int
   , stateHistory          :: [(Int, Int)]
     -- , stateMouseBottonPressed :: Bool
   }
 
 type Demo = RWST Env () State IO
+
+_Bairitsu :: Integral a => a
+_Bairitsu = 1
 
 --------------------------------------------------------------------------------
 
@@ -187,8 +192,8 @@ main = do
                   , envWindow      = win
                   , envOptions     = opt
                   , envProblem     = problem
-                  , envCanvasSizeX = problemSize
-                  , envCanvasSizeY = problemSize
+                  , envCanvasSizeX = problemSize * _Bairitsu
+                  , envCanvasSizeY = problemSize * _Bairitsu
                   }
         pose = case mPose of
           Nothing    -> P.Pose Nothing $ vertices (P.figure problem)
@@ -201,6 +206,7 @@ main = do
                        , statePose = PoseInfo.verifyPose problem pose
                        , stateDislike          = 0
                        , stateSelectedVertexId = Nothing
+                       , stateSelectedEdgeId   = Nothing
                        , stateHistory          = []
                        }
 
@@ -347,7 +353,7 @@ processEvent ev = case ev of
 
   (EventMouseButton _ mb mbs mk) -> do
     printEvent "mouse button" [show mb, show mbs, showModifierKeys mk]
-    poseInfo@PoseInfo { poseVertexInfo } <- gets statePose
+    poseInfo@PoseInfo { .. } <- gets statePose
     (x, y)                               <- getCursorPos
     when (mb == GLFW.MouseButton'1 && mbs == GLFW.MouseButtonState'Pressed) $ do
       gets stateSelectedVertexId >>= \case
@@ -369,6 +375,13 @@ processEvent ev = case ev of
               modify $ \s -> s { statePose = PoseInfo.verifyPose problem newPose
                                , stateSelectedVertexId = Nothing
                                }
+    when (mb == GLFW.MouseButton'2 && mbs == GLFW.MouseButtonState'Pressed) $ do
+      gets stateSelectedEdgeId >>= \case
+        Nothing -> do
+          let e = nearestEdge (x,y) poseInfo poseEdgeInfo
+          modify $ \s -> s { stateSelectedEdgeId = Just (edgeId e) }
+        Just _ -> do
+          modify $ \s -> s { stateSelectedEdgeId = Nothing }
     draw
 
   EventCursorPos{} -> do
@@ -438,6 +451,25 @@ nearestVertex (x, y) ps = minimumBy (compare `on` distance) ps
   distance PoseVertexInfo { vertexPos = P.Point px py } =
     (x - px) ^ (2 :: Int) + (y - py) ^ (2 :: Int)
 
+nearestEdge :: (Int, Int) -> PoseInfo -> [PoseEdgeInfo] -> PoseEdgeInfo
+nearestEdge (x, y) poseInfo es = minimumBy (compare `on` distance) es
+ where
+  distance e =
+    let P.Point ex ey = edgeMidPoint poseInfo e
+    in (x - ex) ^ (2 :: Int) + (y - ey) ^ (2 :: Int)
+
+edgeEndpoints :: PoseInfo -> PoseEdgeInfo -> (P.Point, P.Point)
+edgeEndpoints PoseInfo{poseVertexInfo} PoseEdgeInfo{..} =
+  let (f,t) = edgeFromTo
+      PoseVertexInfo _ p1 = poseVertexInfo!!f
+      PoseVertexInfo _ p2 = poseVertexInfo!!t
+  in (p1,p2)
+
+edgeMidPoint :: PoseInfo -> PoseEdgeInfo -> P.Point
+edgeMidPoint poseInfo e =
+  let (P.Point x1 y1, P.Point x2 y2) = edgeEndpoints poseInfo e
+  in P.Point ((x1 + x2) `div` 2) ((y1 + y2) `div` 2 )
+
 getCursorPos :: Demo (Int, Int)
 getCursorPos = do
   win    <- asks envWindow
@@ -448,7 +480,7 @@ getCursorPos = do
   (x, y) <- liftIO $ GLFW.getCursorPos win
   let x' = ((round x - (width `div` 2)) * 2 * sizeX) `div` width
   let y' = ((round y - (height `div` 2)) * 2 * sizeY) `div` height-- because GL.ortho (-sizeX) (sizeX)
-  pure (x', y')
+  pure (x' `div` _Bairitsu , y' `div` _Bairitsu)
 
 rotatePoint :: P.Point -> P.Point
 rotatePoint (P.Point x y) = P.Point y (-x)
@@ -456,8 +488,8 @@ rotatePoint (P.Point x y) = P.Point y (-x)
 adjustWindow :: Demo ()
 adjustWindow = do
   state <- get
-  sizeX  <- asks envCanvasSizeX
-  sizeY  <- asks envCanvasSizeY
+  sizeX <- asks envCanvasSizeX
+  sizeY <- asks envCanvasSizeY
   let width  = stateFBWidth state
       height = stateFBHeight state
       pos    = GL.Position 0 0
@@ -509,21 +541,31 @@ draw = do
     GLFW.swapBuffers (envWindow env)
 
 drawPose :: P.Problem -> PoseInfo -> Demo ()
-drawPose P.Problem {..} PoseInfo {..} = do
+drawPose P.Problem {..} poseInfo@PoseInfo {..} = do
+  mId <- gets stateSelectedEdgeId
   forM_ poseEdgeInfo $ \PoseEdgeInfo {..} -> do
     let (min', max') = possibleLengthRange
-        color | actualLength < min' = (GL.Color3 1 1 0 :: GL.Color3 GL.GLfloat)
+        color | Just edgeId == mId  = (GL.Color3 0 1 1 :: GL.Color3 GL.GLfloat)
+              | actualLength < min' = (GL.Color3 1 1 0 :: GL.Color3 GL.GLfloat)
               | actualLength > max' = (GL.Color3 1 0 0 :: GL.Color3 GL.GLfloat)
               | otherwise           = (GL.Color3 0 0 1 :: GL.Color3 GL.GLfloat)
     liftIO $ do
       GL.color color
       GL.renderPrimitive GL.Lines $ mapM_ GL.vertex (toE (edgePos edgeFromTo))
+    gets stateSelectedVertexId >>= \case
+      Nothing -> pure ()
+      Just vid -> do
+        let v = poseVertexInfo !! vid
+        liftIO $ do
+          GL.color (GL.Color3 0 0 1 :: GL.Color3 GL.GLfloat)
+          GL.Points.pointSize $= 10
+          GL.renderPrimitive GL.Points $ GL.vertex (toV (vertexPos v))
  where
   edgePos (f, t) = (lookup' f, lookup' t)
   lookup' x = vertexPos (poseVertexInfo !! x)
 
 toV :: P.Point -> GL.Vertex2 GL.GLdouble
-toV (P.Point x y) = GL.Vertex2 (fromIntegral x) (fromIntegral y)
+toV (P.Point x y) = GL.Vertex2 (fromIntegral (_Bairitsu * x)) (fromIntegral (_Bairitsu * y))
 
 toE :: (P.Point, P.Point) -> [GL.Vertex2 GL.GLdouble]
 toE (s, e) = [toV s, toV e]
