@@ -95,11 +95,17 @@ data Options
   , optDumpEvents :: Bool
   , optProblemNumber :: Int
   , optPose :: Maybe FilePath
+  , optPrintGrid :: Bool
   }
   deriving (Show)
 
 optionsParser :: Parser Options
-optionsParser = Options <$> history <*> dumpEvents <*> problemNumber <*> pose
+optionsParser = Options
+    <$> history
+    <*> dumpEvents
+    <*> problemNumber
+    <*> pose
+    <*> printGrid
   where
     history :: Parser (Maybe [(Int, Int)])
     history = optional $ option auto $ mconcat
@@ -112,6 +118,11 @@ optionsParser = Options <$> history <*> dumpEvents <*> problemNumber <*> pose
     dumpEvents = switch $ mconcat
       [ long "dump-events"
       , help "dump OpenGL events"
+      ]
+
+    printGrid :: Parser Bool
+    printGrid = switch $ mconcat
+      [ long "print-grid"
       ]
 
     problemNumber :: Parser Int
@@ -464,10 +475,11 @@ draw = do
       GL.clear [GL.ColorBuffer, GL.DepthBuffer]
       -- [hole]
       GL.color (GL.Color3 1 1 1 :: GL.Color3 GL.GLfloat)
-      GL.Points.pointSize $= 3
-      GL.LineSegments.lineWidth $= 3
       GL.renderPrimitive GL.LineLoop $ mapM_ (GL.vertex . toV) hole
-      GL.renderPrimitive GL.Points $ mapM_ (GL.vertex . toV) (Hole.innerPoints hole)
+      when (optPrintGrid (envOptions env)) $ do
+        GL.Points.pointSize $= 3
+        GL.LineSegments.lineWidth $= 3
+        GL.renderPrimitive GL.Points $ mapM_ (GL.vertex . toV) (Hole.innerPoints hole)
       -- [figure]
       drawPose (envProblem env) (statePose state)
       -- [end]
