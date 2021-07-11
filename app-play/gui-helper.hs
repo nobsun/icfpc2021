@@ -60,10 +60,12 @@ import qualified PoseInfo
 --------------------------------------------------------- -----------------------
 
 data Env = Env
-  { envEventsChan :: TQueue Event
-  , envWindow     :: !GLFW.Window
-  , envOptions    :: Options
-  , envProblem    :: P.Problem
+  { envEventsChan  :: TQueue Event
+  , envWindow      :: !GLFW.Window
+  , envOptions     :: Options
+  , envProblem     :: P.Problem
+  , envCanvasSizeX :: Int
+  , envCanvasSizeY :: Int
   }
 
 data State = State
@@ -80,10 +82,6 @@ data State = State
   }
 
 type Demo = RWST Env () State IO
-
-sizeX, sizeY :: Int
-sizeX = 100
-sizeY = 100
 
 --------------------------------------------------------------------------------
 
@@ -149,8 +147,11 @@ main = do
     Nothing -> pure Nothing
     Just f  -> fromMaybe (error "parsing pose") <$> A.decodeFileStrict' f
 
-  let width  = 640
-      height = 480
+  let
+    width  = 640
+    height = 480
+    problemSize =
+      maximum (concat [ [x, y] | P.Point x y <- P.hole problem ]) `div` 10 * 15
 
   eventsChan <- newTQueueIO :: IO (TQueue Event)
 
@@ -176,10 +177,12 @@ main = do
     (fbWidth , fbHeight ) <- GLFW.getFramebufferSize win
     (winWidth, winHeight) <- GLFW.getWindowSize win
 
-    let env = Env { envEventsChan = eventsChan
-                  , envWindow     = win
-                  , envOptions    = opt
-                  , envProblem    = problem
+    let env = Env { envEventsChan  = eventsChan
+                  , envWindow      = win
+                  , envOptions     = opt
+                  , envProblem     = problem
+                  , envCanvasSizeX = problemSize
+                  , envCanvasSizeY = problemSize
                   }
         pose = case mPose of
           Nothing    -> P.Pose Nothing $ vertices (P.figure problem)
@@ -432,6 +435,8 @@ nearestVertex (x, y) ps = minimumBy (compare `on` distance) ps
 getCursorPos :: Demo (Int, Int)
 getCursorPos = do
   win    <- asks envWindow
+  sizeX  <- asks envCanvasSizeX
+  sizeY  <- asks envCanvasSizeY
   width  <- gets stateWindowWidth
   height <- gets stateWindowHeight
   (x, y) <- liftIO $ GLFW.getCursorPos win
@@ -445,6 +450,8 @@ rotatePoint (P.Point x y) = P.Point y (-x)
 adjustWindow :: Demo ()
 adjustWindow = do
   state <- get
+  sizeX  <- asks envCanvasSizeX
+  sizeY  <- asks envCanvasSizeY
   let width  = stateFBWidth state
       height = stateFBHeight state
       pos    = GL.Position 0 0

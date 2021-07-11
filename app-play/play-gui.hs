@@ -20,6 +20,7 @@ import Text.Printf (printf)
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.UI.GLFW          as GLFW
 
+import Types
 import qualified Solver.BackTracking       as Bk
 import qualified Parser as P
 import           Parser (Figure(..))
@@ -177,7 +178,7 @@ main = do
               , stateEpsilon         = 1
               , stateDislike         = 0
               , stateSelectedNode    = Nothing
-              , stateBk              = Bk.mkBk vs es
+              , stateBk              = Bk.mkBk problem
               , stateHistory         = []
               }
 

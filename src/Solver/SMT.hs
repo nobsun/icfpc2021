@@ -6,6 +6,8 @@ module Solver.SMT
 
 import Control.Monad
 import Control.Monad.Trans
+import qualified Data.Aeson as JSON
+import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.Ratio
 import qualified Data.Vector as V
 import System.IO
@@ -13,6 +15,7 @@ import Text.Printf
 import qualified Z3.Monad as Z3
 
 import qualified Parser as P
+import qualified PoseInfo
 import qualified Hole
 
 
@@ -122,7 +125,14 @@ solve prob = do
               Just x <- Z3.evalInt model x'
               Just y <- Z3.evalInt model y'
               return $ P.Point (fromIntegral x) (fromIntegral y)
-            liftIO $ print sol
+
+            let pose = P.Pose Nothing (V.toList sol)
+                info = PoseInfo.verifyPose prob pose
+            liftIO $ do
+              hFlush stderr
+              BL.putStrLn $ JSON.encode pose
+              PoseInfo.reportPose info
+              hFlush stdout
 
             actions <- liftM concat $ forM (zip [(0::Int)..] es) $ \(i, _) -> do
               let (dx', dy', dx2', dy2') = edgeVars V.! i
@@ -196,7 +206,7 @@ test = do
         eps = P.epsilon prob
 
     pose@P.Pose{ P.pose'vertices = ps } <- solve prob
-    hPrint stderr pose
+    JSON.encodeFile (printf "sol%03d.json" i) pose
 
     let hole = P.hole prob
     forM_ ps $ \p -> do
