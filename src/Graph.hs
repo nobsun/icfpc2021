@@ -28,18 +28,42 @@ type GVertex = G.LNode GridPoint
 -- | 辺
 type GEdge   = G.LEdge GDist
 
-pedgeToGedge :: P.Edge -> GEdge
+pedgeToGedge :: P.Edge -> G.UEdge
 pedgeToGedge = \ case
-  P.Edge s e -> (s,e,0)
+  P.Edge s e -> (s,e,())
 
-gedgeToPedge :: GEdge -> P.Edge
+gedgeToPedge :: G.LEdge a -> P.Edge
 gedgeToPedge (s,e,_) = P.Edge s e
 
+
+-- | グラフ
+type GGraph = G.Gr GridPoint GSegment
+
+mkGGraph :: [GridPoint] -> [G.UEdge] -> GGraph
+mkGGraph vs es = G.mkGraph ns ses
+  where
+    g :: G.Gr GridPoint ()
+    g = G.mkGraph (zip [0..] vs) es
+    ns = zip [0..] vs
+    ses :: [G.LEdge GSegment]
+    ses = map phi les
+    phi :: G.LEdge () -> G.LEdge GSegment
+    phi edg@(s,e,()) = (s,e, segment g edg)
+    les :: [G.LEdge ()]
+    les = G.labEdges g
+
 -- | 穴
-type GHole = G.Gr GridPoint ()
+type GHole = GGraph
+
+mkHole :: [GridPoint] -> GHole
+mkHole vs = mkGGraph vs es
+  where
+    vs' = zipWith const [0..] vs
+    es  = zipWith phi vs' (tail (cycle vs'))
+    phi s e = (s,e,())
 
 -- | 人形
-type GFigure = G.Gr GridPoint GDist
+type GFigure = G.Gr GridPoint GSegment
 {- $setup
 >>> import Data.Aeson
 >>> :set -XOverloadedStrings
@@ -67,35 +91,26 @@ gfigure (_,f,_) = f
 gepsilon :: GProblem -> GEpsilon
 gepsilon (_,_,e) = e
 
-mkHole :: [GridPoint] -> GHole
-mkHole vs = G.mkGraph ns ues
-  where
-    ns  = zip [0..] vs
-    n   = length vs
-    uns = cycle [0 .. n-1]
-    ues = take n (zip3 uns (tail uns) (repeat ()))
-
 mkFigure :: [GridPoint] -> P.Edges -> GFigure
-mkFigure vs es = G.emap dist $ G.mkGraph (G.labNodes g) 
-               $ map (\ e@(s,t,_) -> (s,t,segment g e)) (G.labEdges g)
-  where
-    g :: G.Gr GridPoint GDist
-    g = G.mkGraph ns les
-    ns  = zip [0 ..] vs
-    les = map pedgeToGedge es
+mkFigure vs es = mkGGraph vs (map pedgeToGedge es)
+
 
 -- | 辺から線分へ
-segment :: G.Gr GridPoint GDist -> GEdge -> GSegment
+segment :: G.Gr GridPoint a -> G.LEdge b -> GSegment
 segment g e = case e of
   (m, n, _) -> (fromJust (G.lab g m), fromJust (G.lab g n))
 
 -- | ポーズ
 
-type GPose = (Maybe [P.BonusUse], [GridPoint], GFigure)
+type GPose = (Maybe [P.BonusUse], GGraph, GGraph)
 
 pposeToGpose :: (P.Figure, P.Pose) -> GPose
 pposeToGpose (pfig, ppose) = case ppose of
-  P.Pose bonus vs -> (bonus, map pointToGridPoint vs, pfigToGfig pfig)
+  P.Pose bonus vs -> (bonus, mkGGraph vs' es, gfig)
+    where
+      gfig  = pfigToGfig pfig 
+      es    = G.labEdges (G.emap (const ()) gfig)
+      vs'   = map pointToGridPoint vs
 
 {- |
 >>> Just fig = decode "{\"edges\":[[0,1],[0,2],[1,3],[2,3],[2,4],[3,4]],\"vertices\":[[0,20],[20,0],[20,40],[40,20],[49,45]]}" :: Maybe P.Figure
@@ -106,18 +121,18 @@ pposeToGpose (pfig, ppose) = case ppose of
 [(1250,True,(800,800)),(1250,True,(800,801)),(1250,True,(800,801)),(1250,True,(800,800)),(1250,True,(866,866)),(1250,True,(706,706))]
 -}
 checkPoseByEpsilon :: Int -> GPose -> [(Int, Bool, (GDist, GDist))]
-checkPoseByEpsilon ε (_,gs,fig)
-  = zipWith check oes pes'
+checkPoseByEpsilon ε (_,pos,fig)
+  = zipWith check oes pes
     where
       oes = G.labEdges fig
-      pes = map gedgeToPedge oes
-      posefig = mkFigure gs pes
-      pes' = G.labEdges posefig
-      check (s,e,d) (s',e',d')
+      pes = G.labEdges pos
+      check (s,e,seg) (s',e',seg')
         = if | (s,e) /= (s',e')                    -> error "bug!!"
              | 10^(6::Int) * abs (d' - d) <= d * ε -> (ε, True, (d,d'))
              | otherwise                           -> (ε, False, (d,d'))
-
+          where
+            d  = dist seg
+            d' = dist seg'
 
 -- | 頂点の座標
 coord :: GVertex -> GridPoint
