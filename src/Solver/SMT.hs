@@ -8,7 +8,10 @@ import Control.Monad
 import Control.Monad.Trans
 import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Lazy.Char8 as BL
+import Data.Maybe
+import Data.Monoid
 import Data.Ratio
+import qualified Data.Set as Set
 import qualified Data.Vector as V
 import System.IO
 import Text.Printf
@@ -126,10 +129,36 @@ solve prob = do
                 ]
 
             case actions of
-              [] -> return $ Just sol
-              _ : _ -> do
+              (_ : _) -> do
                 sequence_ actions
                 loop (k+1)
+              [] -> do
+                actions2 <- liftM concat $ forM es $ \(P.Edge s t) -> do
+                  let p1@(P.Point x1 y1) = sol V.! s
+                      p2@(P.Point x2 y2) = sol V.! t
+                      rs1 = catMaybes [findIntersectionRatio (p1,p2) (p3,p4) | (p3, p4) <- zip hole (tail hole ++ [head hole]), intersect' (p1,p2) (p3,p4)]
+                      rs2 = Set.fromList $ [0, 1] ++ rs1
+                      rs3 = Set.toList $ Set.union rs2 (Set.fromList (zipWith (\r1 r2 -> (r1 + r2) / 2) (Set.toList rs2) (tail (Set.toList rs2))))
+                  case listToMaybe [(r, p) | r <- rs3, let p = mix r (x1,y1) (x2,y2), not (isInsideHole p hole)] of
+                    Nothing -> return []
+                    Just (r, p) -> do
+                      let (x1', y1') = pointVars V.! s
+                          (x2', y2') = pointVars V.! t
+                      r' <- Z3.mkRational r
+                      r2' <- Z3.mkSub =<< sequence [Z3.mkRational 1, pure r']
+                      x1'' <- Z3.mkInt2Real x1'
+                      y1'' <- Z3.mkInt2Real y1'
+                      x2'' <- Z3.mkInt2Real x2'
+                      y2'' <- Z3.mkInt2Real y2'
+                      x'' <- Z3.mkAdd =<< sequence [Z3.mkMul [r', x1''], Z3.mkMul [r2', x2'']]
+                      y'' <- Z3.mkAdd =<< sequence [Z3.mkMul [r', y1''], Z3.mkMul [r2', y2'']]
+                      return [liftIO (print (P.Edge s t, p1, p2, p, r)) >> assertIsInside (x'', y'') hole]
+
+                case actions2 of
+                  (_ : _) -> do
+                    sequence_ actions2
+                    loop (k+1)
+                  [] -> return $ Just sol
 
     ret <- loop 1
     case ret of
@@ -195,9 +224,80 @@ distance :: P.Point -> P.Point -> Int
 distance (P.Point x1 y1) (P.Point x2 y2) = (x2 - x1)^(2::Int) + (y2 - y1)^(2::Int)
 
 
+mix :: Integral a => Rational -> (a,a) -> (a,a) -> (Rational, Rational)
+mix r (x1,y1) (x2,y2) = (r * fromIntegral x1 + (1 - r) * fromIntegral x2, r * fromIntegral y1 + (1 - r) * fromIntegral y2)
+
+
+-- http://www5d.biglobe.ne.jp/~tomoya03/shtml/algorithm/Intersection.htm
+-- この記事と異なり、接するだけの場合も True を返すようにしている
+intersect' :: (P.Point, P.Point) -> (P.Point, P.Point) -> Bool
+intersect' (P.Point x1 y1, P.Point x2 y2) (P.Point x3 y3, P.Point x4 y4) = ta*tb <= 0 && tc*td <= 0
+  where
+    ta = (x3-x4)*(y1-y3)+(y3-y4)*(x3-x1)
+    tb = (x3-x4)*(y2-y3)+(y3-y4)*(x3-x2)
+    tc = (x1-x2)*(y3-y1)+(y1-y2)*(x1-x3)
+    td = (x1-x2)*(y4-y1)+(y1-y2)*(x1-x4)
+
+
+-- https://qiita.com/kaityo256/items/988bf94bf7b674b8bfdc
+findIntersectionRatio :: (P.Point, P.Point) -> (P.Point, P.Point) -> Maybe Rational
+findIntersectionRatio (p1@(P.Point x1 y1), p2@(P.Point x2 y2)) (P.Point x3 y3, P.Point x4 y4)
+  | p1 == p2 = Just 1
+  | det == 0 = Nothing -- error ("should not happen: " ++ show ((P.Point x1 y1, P.Point x2 y2), (P.Point x3 y3, P.Point x4 y4)))
+  | otherwise = Just t
+  where
+    det = (x1 - x2) * (y4 - y3) - (x4 - x3) * (y1 - y2)
+    t = fromIntegral ((y4 - y3) * (x4 - x2) + (x3 - x4) * (y4 - y2)) % fromIntegral det
+
+
+-- Hole.hs からコピペして、点の座標を Point から (Rational, Rational) に変更
+isInsideHole :: (Rational, Rational) -> P.Hole -> Bool
+isInsideHole p h =
+  case getAp m of
+    Nothing -> True
+    Just cp -> odd (getSum cp :: Int)
+  where
+    m = mconcat
+      [ if isOn p e then
+          Ap Nothing
+        else if isCrossing p e then
+          Ap (Just 1)
+        else
+          Ap (Just 0)
+      | e <- zip h (tail h ++ [head h])
+      ]
+
+
+-- Hole.hs からコピペして、点の座標を Point から (Rational, Rational) に変更
+isOn :: (Rational, Rational) -> (P.Point, P.Point) -> Bool
+isOn (x, y) (P.Point x1 y1, P.Point x2 y2)
+  | not (y1' <= y && y <= y2') && not (y2' <= y && y <= y1') = False
+  | y1' == y2' = x1' <= x && x <= x2' || x2' <= x && x <= x1'
+  | otherwise = x == x1' + (y - y1') * ((x2' - x1') / (y2' - y1'))
+  where
+    x1' = fromIntegral x1
+    x2' = fromIntegral x2
+    y1' = fromIntegral y1
+    y2' = fromIntegral y2
+
+
+-- Hole.hs からコピペして、点の座標を Point から (Rational, Rational) に変更
+-- https://www.nttpc.co.jp/technology/number_algorithm.html
+isCrossing :: (Rational, Rational) -> (P.Point, P.Point) -> Bool
+isCrossing (x, y) (P.Point x1 y1, P.Point x2 y2) =
+  ((y1' <= y && y < y2') || (y2' <= y && y < y1')) &&
+  x < x1' + (y - y1') * ((x2' - x1') / (y2' - y1'))
+  where
+    x1' = fromIntegral x1
+    x2' = fromIntegral x2
+    y1' = fromIntegral y1
+    y2' = fromIntegral y2
+
+
 test :: IO ()
 test = do
   forM_ [(1::Int)..59] $ \i -> do
+  -- forM_ [(8::Int), 28, 29, 32] $ \i -> do
     hPutStrLn stderr "==================================="
     let fname = printf "data/lightning-problems/%03d.json" i
     hPutStrLn stderr fname
