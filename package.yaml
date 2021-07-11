@@ -52,15 +52,6 @@ flags:
 
 
 executables:
-  icfpc2021:
-    main:                Main.hs
-    source-dirs:         app
-    ghc-options:
-    - -rtsopts
-    # - -threaded
-    # - -with-rtsopts=-N
-    dependencies:
-    - icfpc2021
 
   play-gui:
     main:                play-gui.hs
