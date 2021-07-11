@@ -301,7 +301,7 @@ isCrossing (x, y) (P.Point x1 y1, P.Point x2 y2) =
 test :: IO ()
 test = do
   -- forM_ [(1::Int)..59] $ \i -> do
-  forM_ [(28::Int)] $ \i -> do 
+  forM_ [(8::Int), 28, 29, 32] $ \i -> do
     hPutStrLn stderr "==================================="
     let fname = printf "data/lightning-problems/%03d.json" i
     hPutStrLn stderr fname
