@@ -426,6 +426,13 @@ processEvent ev = case ev of
       'x' -> movePose (0, 0, -1, 1)
       'y' -> movePose (0, 0, 1, -1)
       'r' -> rotatePose
+      '!' -> do
+        probNum <- optProblemNumber <$> asks envOptions
+        poseInfo <- gets statePose
+        liftIO $ do
+          let jsonFn = printf "helper-%d.json" probNum
+          BLC.writeFile jsonFn $ A.encode $ poseOfPoseInfo poseInfo
+          putStrLn $ "Pose JSON saved: " ++ jsonFn
       _   -> pure ()
    where
     movePose (dx, dy, mx, my) = do
