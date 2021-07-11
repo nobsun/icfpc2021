@@ -2,7 +2,13 @@
 
 以下の環境変数を設定してください。
 
+```
 export ICFP2021_API_TOKEN=<<team-token>>
+```
+
+トークンについては以下のリンク先にあります。
+
+参考: https://sampou.slack.com/archives/C027JJJ6CE6/p1625914727171900?thread_ts=1625914647.171800&cid=C027JJJ6CE6
 
 # 前回取得結果を一旦削除
 
