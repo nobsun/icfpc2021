@@ -184,7 +184,7 @@ instance FromJSON Problem where
 True
 -}
 instance ToJSON Problem where
-  toJSON = genericToJSON defaultOptions
+  toJSON = genericToJSON defaultOptions { omitNothingFields = True }
   -- toJSON (Problem h f e) = object [ "hole" .= h, "figure" .= f, "epsilon" .= e ]
 
 
@@ -227,5 +227,5 @@ instance FromJSON Pose where
 True
 -}
 instance ToJSON Pose where
-  toJSON = genericToJSON poseOptions
+  toJSON = genericToJSON poseOptions { omitNothingFields = True }
   -- toJSON (Pose vs) = object [ "vertices" .= vs ]
