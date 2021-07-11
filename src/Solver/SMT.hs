@@ -148,7 +148,7 @@ solve prob = do
                   x1'' <- Z3.mkInt2Real x1'
                   y1'' <- Z3.mkInt2Real y1'
                   x2'' <- Z3.mkInt2Real x2'
-                  y2'' <- Z3.mkInt2Real x2'
+                  y2'' <- Z3.mkInt2Real y2'
                   x'' <- Z3.mkAdd =<< sequence [Z3.mkMul [r', x1''], Z3.mkMul [r2', x2'']]
                   y'' <- Z3.mkAdd =<< sequence [Z3.mkMul [r', y1''], Z3.mkMul [r2', y2'']]
                   return [liftIO (print ("XXX", P.Edge s t, r)) >> assertIsInside (x'', y'') hole]
