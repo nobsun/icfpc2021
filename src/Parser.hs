@@ -14,6 +14,8 @@ module Parser
     , Figure (..)
     , Problem (..)
     , Pose (..)
+    , BonusDef(..)
+    , BonusType(..)
     , BonusUse (..)
     , readProblem
     ) where
