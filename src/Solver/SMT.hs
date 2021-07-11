@@ -1,5 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
-module Solver.SMT where
+module Solver.SMT
   ( solve
   , test
   ) where
