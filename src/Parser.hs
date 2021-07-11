@@ -34,11 +34,14 @@ readProblem :: FilePath -> IO (Maybe Problem)
 readProblem fp = decode <$> LBS.readFile fp
 
 
+{- $setup
+>>> :set -XOverloadedStrings
+-}
+
 data Point = Point { x :: Int
                    , y :: Int
                    } deriving (Show, Eq, Ord, Generic)
 {- |
->>> :set -XOverloadedStrings
 >>> decode "[1, 2]" :: Maybe Point
 Just (Point {x = 1, y = 2})
 -}
@@ -103,7 +106,6 @@ data Edge = Edge { s :: Index -- ^ start
                  } deriving (Show, Eq, Generic)
 
 {- |
->>> :set -XOverloadedStrings
 >>> decode "[1, 2]" :: Maybe Edge
 Just (Edge {s = 1, e = 2})
 -}
@@ -132,7 +134,6 @@ data Figure = Figure { edges    :: Edges
                      } deriving (Show, Eq, Generic)
 
 {- |
->>> :set -XOverloadedStrings
 >>> decode "{\"edges\":[[1,2],[3,4]],\"vertices\":[[5,6]]}" :: Maybe Figure
 Just (Figure {edges = [Edge {s = 1, e = 2},Edge {s = 3, e = 4}], vertices = [Point {x = 5, y = 6}]})
 -}
@@ -208,7 +209,6 @@ instance ToJSON BonusUse where
 data Pose = Pose { pose'bonuses :: Maybe [BonusUse], pose'vertices :: [Point] } deriving (Show, Eq, Generic)
 
 {- |
->>> :set -XOverloadedStrings
 >>> decode "{\"bonuses\":[{\"bonus\":\"GLOBALIST\",\"problem\":35}],\"vertices\":[[1,2],[3,4]]}" :: Maybe Pose
 Just (Pose {pose'bonuses = Just [BonusUse {pose'bonus = GLOBALIST, pose'problem = 35}], pose'vertices = [Point {x = 1, y = 2},Point {x = 3, y = 4}]})
 -}
