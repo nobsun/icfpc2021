@@ -20,6 +20,7 @@ data PoseInfo = PoseInfo
   { poseVertexInfo :: [PoseVertexInfo]
   , poseEdgeInfo   :: [PoseEdgeInfo]
   , poseDislikes   :: Int
+  , poseIsValid    :: Bool
   }
   deriving Show
 
@@ -64,6 +65,8 @@ verifyPose Problem { hole, figure, epsilon } pose@(Pose _bonus poseVertices) =
                     ]
             in PoseEdgeInfo { .. }
         poseDislikes = dislike hole pose
+        poseIsValid = all valid poseEdgeInfo
+          where valid PoseEdgeInfo{..} = tolerant && included
       in PoseInfo {..}
 
 reportPose :: PoseInfo -> IO ()
