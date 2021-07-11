@@ -3,7 +3,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS -Wno-unused-top-binds #-}
 module Graph
@@ -18,6 +17,7 @@ module Graph
   , ghole
   , gfigure
   , gepsilon
+  , segment
   ) where
 
 import Data.Maybe
