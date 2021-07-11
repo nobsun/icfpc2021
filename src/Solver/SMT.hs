@@ -1,14 +1,14 @@
 {-# LANGUAGE BangPatterns #-}
-module Solver.SMT
+module Solver.SMT where
   ( solve
   , test
-  , test2
   ) where
 
 import Control.Monad
 import Control.Monad.Trans
 import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Lazy.Char8 as BL
+import Data.Maybe
 import Data.Monoid
 import Data.Ratio
 import Data.Semigroup
@@ -133,25 +133,25 @@ solve prob = do
             actions2 <- liftM concat $ forM (zip [(0::Int)..] es) $ \(i, P.Edge s t) -> do
               let p1@(P.Point x1 y1) = sol V.! s
                   p2@(P.Point x2 y2) = sol V.! t
-                  rs1 = [(findIntersectionRatio (p1,p2) (p3,p4), (p3,p4)) | (p3, p4) <- zip hole (tail hole ++ [head hole]), intersect' (p1,p2) (p3,p4)]
-              if null rs1 then do
-                return []
-              else do
-                liftIO $ hPutStrLn stderr $ "BBB: " ++ show (i, P.Edge s t, p1, p2, [(r, (p3, p4), mix r (x1,y1) (x2,y2) ) | (r, (p3, p4)) <- rs1])
-                let rs2 = Set.toList $ Set.fromList $ [0, 1] ++ map fst rs1
-                    rs3 = zipWith (\r1 r2 -> (r1 + r2) / 2) rs2 (tail rs2)
-                    r = head [r | r <- rs3, let p = mix r (x1,y1) (x2,y2), not (isInsideHole p hole)]
-                let (x1', y1') = pointVars V.! s
-                    (x2', y2') = pointVars V.! t
-                r' <- Z3.mkRational r
-                r2' <- Z3.mkSub =<< sequence [Z3.mkRational 1, pure r']
-                x1'' <- Z3.mkInt2Real x1'
-                y1'' <- Z3.mkInt2Real y1'
-                x2'' <- Z3.mkInt2Real x2'
-                y2'' <- Z3.mkInt2Real x2'
-                x'' <- Z3.mkAdd =<< sequence [Z3.mkMul [r', x1''], Z3.mkMul [r2', x2'']]
-                y'' <- Z3.mkAdd =<< sequence [Z3.mkMul [r', y1''], Z3.mkMul [r2', y2'']]
-                return [liftIO (print ("XXX", P.Edge s t, r)) >> assertIsInside (x'', y'') hole]
+                  rs1 = catMaybes [findIntersectionRatio (p1,p2) (p3,p4) | (p3, p4) <- zip hole (tail hole ++ [head hole]), intersect' (p1,p2) (p3,p4)]
+                  rs2 = Set.fromList $ [0, 1] ++ rs1
+                  rs3 = Set.toList $ Set.union rs2 (Set.fromList (zipWith (\r1 r2 -> (r1 + r2) / 2) (Set.toList rs2) (tail (Set.toList rs2))))
+              case listToMaybe [r | r <- rs3, let p = mix r (x1,y1) (x2,y2), not (isInsideHole p hole)] of
+                Nothing -> return []
+                Just r -> do
+                  -- let p = mix r (x1,y1) (x2,y2)
+                  -- liftIO $ print (p2, p2, r, p)
+                  let (x1', y1') = pointVars V.! s
+                      (x2', y2') = pointVars V.! t
+                  r' <- Z3.mkRational r
+                  r2' <- Z3.mkSub =<< sequence [Z3.mkRational 1, pure r']
+                  x1'' <- Z3.mkInt2Real x1'
+                  y1'' <- Z3.mkInt2Real y1'
+                  x2'' <- Z3.mkInt2Real x2'
+                  y2'' <- Z3.mkInt2Real x2'
+                  x'' <- Z3.mkAdd =<< sequence [Z3.mkMul [r', x1''], Z3.mkMul [r2', x2'']]
+                  y'' <- Z3.mkAdd =<< sequence [Z3.mkMul [r', y1''], Z3.mkMul [r2', y2'']]
+                  return [liftIO (print ("XXX", P.Edge s t, r)) >> assertIsInside (x'', y'') hole]
 
             case actions of
               (_ : _) -> do
@@ -232,15 +232,23 @@ mix :: Integral a => Rational -> (a,a) -> (a,a) -> (Rational, Rational)
 mix r (x1,y1) (x2,y2) = (r * fromIntegral x1 + (1 - r) * fromIntegral x2, r * fromIntegral y1 + (1 - r) * fromIntegral y2)
 
 
+-- http://www5d.biglobe.ne.jp/~tomoya03/shtml/algorithm/Intersection.htm
+-- この記事と異なり、接するだけの場合も True を返すようにしている
 intersect' :: (P.Point, P.Point) -> (P.Point, P.Point) -> Bool
-intersect' (p1, p2) (p3, p4) = TwoDim.intersect' (f p1, f p2) (f p3, f p4)
+intersect' (P.Point x1 y1, P.Point x2 y2) (P.Point x3 y3, P.Point x4 y4) = ta*tb <= 0 && tc*td <= 0
   where
-    f (P.Point x y) = (x, y)
+    ta = (x3-x4)*(y1-y3)+(y3-y4)*(x3-x1)
+    tb = (x3-x4)*(y2-y3)+(y3-y4)*(x3-x2)
+    tc = (x1-x2)*(y3-y1)+(y1-y2)*(x1-x3)
+    td = (x1-x2)*(y4-y1)+(y1-y2)*(x1-x4)
 
 
 -- https://qiita.com/kaityo256/items/988bf94bf7b674b8bfdc
-findIntersectionRatio :: (P.Point, P.Point) -> (P.Point, P.Point) -> Rational
-findIntersectionRatio (P.Point x1 y1, P.Point x2 y2) (P.Point x3 y3, P.Point x4 y4) = t
+findIntersectionRatio :: (P.Point, P.Point) -> (P.Point, P.Point) -> Maybe Rational
+findIntersectionRatio (p1@(P.Point x1 y1), p2@(P.Point x2 y2)) (P.Point x3 y3, P.Point x4 y4)
+  | p1 == p2 = Just 1
+  | det == 0 = Nothing -- error ("should not happen: " ++ show ((P.Point x1 y1, P.Point x2 y2), (P.Point x3 y3, P.Point x4 y4)))
+  | otherwise = Just t
   where
     det = (x1 - x2) * (y4 - y3) - (x4 - x3) * (y1 - y2)
     t = fromIntegral ((y4 - y3) * (x4 - x2) + (x3 - x4) * (y4 - y2)) % fromIntegral det
@@ -319,6 +327,3 @@ test = do
        unless (min_d <= d && d <= max_d) $ do
          hPrintf stderr "(%s) (length %d) is mapped to (%s, %s) (length %d)\n" (show e) orig_d (show (ps !! s)) (show (ps !! t)) d
          hPrintf stderr "But %d is not in [%d, %d]\n" d min_d max_d
-
-test2 = TwoDim.intersect' ((12, 13), (28, 37)) ((18, 22), (16, 29))
-  -- intersect' (P.Point 12 13, P.Point 28 37) (P.Point 18 22, P.Point 16 29)
