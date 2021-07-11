@@ -83,6 +83,7 @@ executables:
           - mtl
           - optparse-applicative
           - pretty
+          - random
           - stm
           - transformers
         else:

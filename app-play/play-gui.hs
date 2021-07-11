@@ -15,6 +15,7 @@ import qualified Data.IntMap.Lazy          as IntMap
 import qualified Data.Map                  as Map
 import Options.Applicative
 import System.IO
+import System.Random (randomIO)
 import Text.Printf (printf)
 
 import qualified Graphics.Rendering.OpenGL as GL
@@ -318,6 +319,7 @@ processEvent ev =
           when (mb == GLFW.MouseButton'1 && mbs == GLFW.MouseButtonState'Released) $ do
               win <- asks envWindow
               (x,y) <- liftIO $ GLFW.getCursorPos win
+              rand <- liftIO $ randomIO
               state <- get
               let width = stateWindowWidth state
                   height = stateWindowHeight state
@@ -329,7 +331,7 @@ processEvent ev =
                       case (stateSelectedNode state, (x',y')`nearElemIndex`vs) of
                         (Nothing, Nothing) -> (Nothing, bk, vs)
                         (Nothing, Just n)  -> (Just n, bk, vs)
-                        (Just n, _)  -> case Bk.move bk n (x',y') of
+                        (Just n, _)  -> case Bk.move bk rand n (x',y') of
                                           Nothing -> (Nothing, bk, vs)
                                           Just bk'-> (Nothing, bk', Map.elems (Bk.vertices bk'))
               modify $ \s -> s

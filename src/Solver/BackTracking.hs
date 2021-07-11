@@ -4,9 +4,9 @@ module Solver.BackTracking
 ( solve, Bk(..), mkBk, move, sample1, sample2, sample3 )
 where
 
-import Data.Function (on)
 import Data.Maybe (listToMaybe, maybeToList)
 import Data.List (intersect, sortBy)
+import Data.Ord (comparing)
 
 import qualified Data.Graph.Inductive.Graph as G
 import qualified Data.Graph.Inductive.Tree as GT
@@ -14,8 +14,8 @@ import qualified Data.Map as Map
 
 import Types
 import qualified Parser as P
-import qualified Segment as S (intersect)
-import qualified Score as Score (tolerant)
+--import qualified Segment as S (intersect)
+--import qualified Score as Score (tolerant)
 
 --import Debug.Trace
 
@@ -69,11 +69,12 @@ mkBk' vs es hole eps =
     ledges = [(e,d,(abs(e1-d1),abs(e2-d2))) | (e,d)<-es, let (e1,e2)=vs!!e, let (d1,d2)=vs!!d]
 
 move :: Bk
+     -> Int       -- ^ 疑似ランダム用
      -> Int       -- ^ 動かす頂点の番号
      -> GridPoint -- ^ 動かす先の座標
      -> Maybe Bk  -- ^ 失敗したらNothing
-move bk@Bk{graph=g} p to      =
-  listToMaybe $ concat [backtrack bk depth n newm | n<-G.neighbors g p]
+move bk@Bk{graph=g} rand p to      =
+  listToMaybe $ concat [backtrack bk depth rand n newm | n<-G.neighbors g p]
   where
     newm = Map.singleton p to
     depth = length (G.nodes g) + length (G.edges g)
@@ -81,11 +82,12 @@ move bk@Bk{graph=g} p to      =
 
 backtrack :: Bk
           -> Int                     -- ^ 探索の深さ制限
+          -> Int                     -- ^ 疑似ランダム用
           -> Int                     -- ^ 今から動かす点. 前提としてnewmのいづれかの点と辺があること.
           -> Map.Map Int GridPoint   -- ^ 動かし済みの点の集合
           -> [Bk]                    -- ^ 見つかれば返す. 見つからなかったら空
-backtrack _bk 0 _p _newm = []
-backtrack bk@Bk{graph=g, epsilon=eps} depth p newm  =
+backtrack _bk 0 _rand _p _newm = []
+backtrack bk@Bk{graph=g, vertices=vmap, epsilon=eps} depth rand p newm  =
 --  traceShow (p,newm) $
   concat
   [if done then [bk{vertices=newm'}]
@@ -97,10 +99,8 @@ backtrack bk@Bk{graph=g, epsilon=eps} depth p newm  =
   where
     -- まず点pの行き先候補を探す
     -- 動かし済みの点集合でpに隣接する点たちから, 全部の傾きを考慮して共通点を取るとpの行き先候補になる
-    -- 最後にホール外の候補を除外してdislikeの小さい順に並べておく
     cands :: [GridPoint]
-    cands = sortp bk
-          $ filterp bk [ newm Map.! n | n<-ns]
+    cands = sortp rand (vmap Map.! p)
           $ foldr1 intersect
             [ nextp (newm Map.! n) (slope g p n) eps | n<-ns]
 
@@ -111,7 +111,7 @@ backtrack bk@Bk{graph=g, epsilon=eps} depth p newm  =
     merge :: Int -> Map.Map Int GSlope -> Maybe (Map.Map Int GSlope)
     merge n m | Map.member n m = Just m
               | otherwise =
-      case backtrack bk (depth-1) n m of
+      case backtrack bk (depth-1) rand n m of
         []      -> Nothing
         (bk':_) -> Just (Map.union m (vertices bk'))
 
@@ -121,13 +121,17 @@ slope :: GT.Gr Int GSlope -> Int -> Int -> GSlope
 slope g p q =
   head [s | (p1,p2,s)<-G.out g p++G.inn g p, p1==q || p2==q]
 
--- 点リストをdislikeの小さい順に並べる
-sortp :: Bk  -> [GridPoint] -> [GridPoint]
-sortp Bk{hole=hole} ps =
-  sortBy (compare `on` dislike) ps
+-- 点p に近い順に並べる
+sortp :: Int -> GridPoint -> [GridPoint] -> [GridPoint]
+sortp rand p xs =
+  map snd $
+  case ys of
+    (a@(da,_):b@(db,_):cs) | da==db && rand`mod`2==0 -> b:a:cs
+    _ -> ys
   where
-    dislike p = minimum [distance p h | h<-hole]
+    ys = sortBy (comparing fst) [(distance p x,x) | x<-xs]
 
+{-
 -- 候補の座標リストからホールに入らないものを除外する
 filterp :: Bk
         -> [GridPoint] -- 点pの隣接点
@@ -138,19 +142,15 @@ filterp Bk{hole=hole} ps qs =
   where
     -- ホールの全部の辺
     hs = zip hole (tail hole++hole)
+-}
 
 -- 傾きとEpsilonから隣接点の候補リストを取得する
 nextp :: GridPoint -> GSlope -> Int -> [GridPoint]
-nextp (x,y) (dx,dy) eps =
-  [ q
+nextp (x,y) (dx,dy) _eps =
+  [ (x+ a*d, y+ b*e)
   | a<-[-1,1]
   , b<-[-1,1]
   , (d,e)<-[(dx,dy),(dy,dx)]
-  , let p = (x+ a*d, y+ b*e)
-  , s<-[-1,0,1] -- 少しずれてもEpsilonで対応できるかも
-  , t<-[-1,0,1]
-  , let q = (x* a*d+s, y+ b*e+t)
-  , Score.tolerant eps ((x,y), p) ((x,y), q)
   ]
 
 distance :: GridPoint -> GridPoint -> Int
