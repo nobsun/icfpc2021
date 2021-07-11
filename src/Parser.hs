@@ -64,7 +64,10 @@ instance ToJSON Point where
 
 data BonusType
   = GLOBALIST
-  | BREAK_A_LEG deriving (Show, Eq, Generic)
+  | BREAK_A_LEG
+  | WALLHACK
+  | SUPERFLEX
+  deriving (Show, Eq, Generic)
 
 {- |
 >>> decode "\"BREAK_A_LEG\"" :: Maybe BonusType
