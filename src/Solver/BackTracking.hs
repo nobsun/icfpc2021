@@ -159,7 +159,7 @@ distance (a,b) (c,d) =
 
 autoTuneEdges :: Bk -> Bk
 autoTuneEdges =
-  go 40
+  go 10000
   where
     go 0 bk = bk
     go n bk = case autoTuneEdge1 bk of
