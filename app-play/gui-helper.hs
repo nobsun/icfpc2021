@@ -148,8 +148,8 @@ main = do
     Just f  -> fromMaybe (error "parsing pose") <$> A.decodeFileStrict' f
 
   let
-    width  = 640
-    height = 480
+    width  = 1920
+    height = 1080
     problemSize =
       maximum (concat [ [x, y] | P.Point x y <- P.hole problem ]) `div` 10 * 15
 
