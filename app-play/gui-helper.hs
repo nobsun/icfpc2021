@@ -125,7 +125,7 @@ optionsParser =
   dumpEvents = switch $ mconcat [long "dump-events", help "dump OpenGL events"]
 
   printGrid :: Parser Bool
-  printGrid = switch $ mconcat [long "print-grid"]
+  printGrid = switch $ mconcat [long "print-grid", help "print grid"]
 
   problemNumber :: Parser Int
   problemNumber = option auto
@@ -481,26 +481,37 @@ draw = do
     GL.clear [GL.ColorBuffer, GL.DepthBuffer]
     -- [hole]
     GL.color (GL.Color3 1 1 1 :: GL.Color3 GL.GLfloat)
+    GL.LineSegments.lineWidth $= 3
     GL.renderPrimitive GL.LineLoop $ mapM_ (GL.vertex . toV) hole
+    -- [hole:grid]
     when (optPrintGrid (envOptions env)) $ do
       GL.Points.pointSize $= 3
-      GL.LineSegments.lineWidth $= 3
       GL.renderPrimitive GL.Points
         $ mapM_ (GL.vertex . toV) (Hole.innerPoints hole)
-    -- [figure]
-    drawPose (envProblem env) (statePose state)
-    -- [end]
+    -- [hole:vertex]
+    GL.Points.pointSize $= 10
+    GL.renderPrimitive GL.Points $ mapM_ (GL.vertex . toV) hole
+    -- [bonuses]
+    case P.bonuses (envProblem env) of
+      Nothing -> pure ()
+      Just bonuses -> forM_ bonuses $ \P.BonusDef{position} -> do
+        GL.Points.pointSize $= 10
+        GL.color (GL.Color3 1 0 1 :: GL.Color3 GL.GLfloat)
+        GL.renderPrimitive GL.Points $ GL.vertex (toV position)
+  drawPose (envProblem env) (statePose state)
+  liftIO $
     GLFW.swapBuffers (envWindow env)
 
-drawPose :: P.Problem -> PoseInfo -> IO ()
+drawPose :: P.Problem -> PoseInfo -> Demo ()
 drawPose P.Problem {..} PoseInfo {..} = do
   forM_ poseEdgeInfo $ \PoseEdgeInfo {..} -> do
     let (min', max') = possibleLengthRange
         color | actualLength < min' = (GL.Color3 1 1 0 :: GL.Color3 GL.GLfloat)
               | actualLength > max' = (GL.Color3 1 0 0 :: GL.Color3 GL.GLfloat)
               | otherwise           = (GL.Color3 0 0 1 :: GL.Color3 GL.GLfloat)
-    GL.color color
-    GL.renderPrimitive GL.Lines $ mapM_ GL.vertex (toE (edgePos edgeFromTo))
+    liftIO $ do
+      GL.color color
+      GL.renderPrimitive GL.Lines $ mapM_ GL.vertex (toE (edgePos edgeFromTo))
  where
   edgePos (f, t) = (lookup' f, lookup' t)
   lookup' x = vertexPos (poseVertexInfo !! x)
