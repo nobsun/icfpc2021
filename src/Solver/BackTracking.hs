@@ -159,7 +159,7 @@ distance (a,b) (c,d) =
 
 autoTuneEdges :: Bk -> Bk
 autoTuneEdges =
-  go 20
+  go 40
   where
     go 0 bk = bk
     go n bk = case autoTuneEdge1 bk of
@@ -177,10 +177,10 @@ autoTuneEdge1 bk@Bk{graph=g, vertices=vmap, epsilon=eps} =
 
     tune :: [(Int,GridPoint)]
     tune = [ (p, (p1+dx,p2+dy))
-           | (p,q,spq) <-take 3 invalidNodes
+           | (p,q,spq) <- invalidNodes
            , let (p1,p2) = vmap Map.! p
            , let (q1,q2) = vmap Map.! q
-           , (dx,dy)<-take 200 adjs
+           , (dx,dy)<-take 400 adjs
            , Score.tolerant eps ((0,0),spq) ((p1+dx,p2+dy),(q1,q2))
            ]
 
