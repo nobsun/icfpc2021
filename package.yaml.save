@@ -1,0 +1,177 @@
+name:                icfpc2021
+version:             0.1.0.0
+github:              "nobsun/icfpc2021"
+license:             BSD3
+author:              "Nobuo Yamashita"
+maintainer:          "nobsun@sampou.org"
+copyright:           "Copyright: (c) 2021 Nobuo Yamashita"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Experiment
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/nobsun/icfpc2021#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- bytestring
+- filepath
+- aeson
+
+library:
+  source-dirs: src
+  dependencies:
+  - utf8-string
+  - unicode-show
+  - fgl
+  - containers
+  - transformers
+  - vector
+  - z3
+  - mtl
+
+  ## - toysolver
+  ghc-options: -Wall
+
+flags:
+  static:
+    description: build statically linked binaries
+    default: false
+    manual: true
+
+  gui:
+    description: build playgui which requires OpenGL related libraries
+    default: false
+    manual: true
+
+
+executables:
+  icfpc2021:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -rtsopts
+    # - -threaded
+    # - -with-rtsopts=-N
+    dependencies:
+    - icfpc2021
+
+  play-gui:
+    main:                play-gui.hs
+    source-dirs:         app-play
+    other-modules:       []
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    when:
+      - condition: flag(gui)
+        then:
+          buildable: true
+          dependencies:
+          - icfpc2021
+          - containers
+          - process
+          - GLFW-b
+          - OpenGL
+          - base
+          - mtl
+          - optparse-applicative
+          - pretty
+          - stm
+          - transformers
+          - random
+        else:
+          buildable: false
+      - condition: flag(static)
+        ghc-options: -static
+
+  gui-helper:
+    main:                gui-helper.hs
+    other-modules:       []
+    source-dirs:         app-play
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    when:
+      - condition: flag(gui)
+        then:
+          buildable: true
+          dependencies:
+          - icfpc2021
+          - bytestring
+          - containers
+          - process
+          - GLFW-b
+          - OpenGL
+          - base
+          - mtl
+          - optparse-applicative
+          - pretty
+          - StateVar
+          - stm
+          - transformers
+          - text
+        else:
+          buildable: false
+      - condition: flag(static)
+        ghc-options: -static
+
+  submit:
+    main:                submit.hs
+    source-dirs:         app-submit
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    dependencies:
+    - http-client
+    - http-conduit
+    - optparse-applicative
+    - mtl
+    - text
+
+  bonus-graph:
+    main:                bonus.hs
+    source-dirs:         main
+    dependencies:
+    - icfpc2021
+    - directory
+    - fgl
+
+tests:
+  icfpc2021-test:
+    main:                spec.hs
+    other-modules:
+    - LibSpec
+    - HoleSpec
+    - ScoreSpec
+    source-dirs:         test
+    # ghc-options:
+    # - -threaded
+    # - -rtsopts
+    # - -with-rtsopts=-N
+    dependencies:
+    - fgl
+    - icfpc2021
+    - hspec
+    - main-tester
+    # - utf8-string
+    # - unicode-show
+
+  icfpc2021-doctest:
+    main:                doctests.hs
+    other-modules:       []
+    source-dirs:         test
+    # ghc-options:
+    # - -threaded
+    # - -rtsopts
+    # - -with-rtsopts=-N
+    dependencies:
+    - icfpc2021
+    - doctest
