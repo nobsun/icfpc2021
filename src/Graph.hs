@@ -55,6 +55,9 @@ mkGGraph vs es = G.mkGraph ns ses
 -- | 穴
 type GHole = GGraph
 
+pholeToGHole :: P.Hole -> GHole
+pholeToGHole = mkHole . map pointToGridPoint
+
 mkHole :: [GridPoint] -> GHole
 mkHole vs = mkGGraph vs es
   where
@@ -71,7 +74,10 @@ type GFigure = G.Gr GridPoint GSegment
 
 {- |
 >>> Just fig = decode "{\"edges\":[[0,1],[0,2],[1,3],[2,3],[2,4],[3,4]],\"vertices\":[[0,20],[20,0],[20,40],[40,20],[49,45]]}" :: Maybe P.Figure
->>> pfigToGfig fig
+>>> gfig = pfigToGfig fig
+>>> gfig
+mkGraph [(0,(0,20)),(1,(20,0)),(2,(20,40)),(3,(40,20)),(4,(49,45))] [(0,1,((0,20),(20,0))),(0,2,((0,20),(20,40))),(1,3,((20,0),(40,20))),(2,3,((20,40),(40,20))),(2,4,((20,40),(49,45))),(3,4,((40,20),(49,45)))]
+>>> G.emap dist gfig
 mkGraph [(0,(0,20)),(1,(20,0)),(2,(20,40)),(3,(40,20)),(4,(49,45))] [(0,1,800),(0,2,800),(1,3,800),(2,3,800),(2,4,866),(3,4,706)]
 -}
 pfigToGfig :: P.Figure -> GFigure
@@ -115,10 +121,9 @@ pposeToGpose (pfig, ppose) = case ppose of
 {- |
 >>> Just fig = decode "{\"edges\":[[0,1],[0,2],[1,3],[2,3],[2,4],[3,4]],\"vertices\":[[0,20],[20,0],[20,40],[40,20],[49,45]]}" :: Maybe P.Figure
 >>> ofig = pfigToGfig fig
->>> checkPoseByEpsilon 1250 (undefined,[(15,0),(35,20),(0,24),(20,44),(30,19)],ofig)
+>>> gpos = pposeToGpose (fig, P.Pose undefined (map (uncurry P.Point) [(15,0),(35,20),(0,24),(20,44),(30,19)]))
+>>> checkPoseByEpsilon 1250 gpos
 [(1250,True,(800,800)),(1250,True,(800,801)),(1250,True,(800,801)),(1250,True,(800,800)),(1250,False,(866,925)),(1250,False,(706,725))]
->>> checkPoseByEpsilon 1250 (undefined,[(15,0),(35,20),(0,24),(20,44),(29,19)],ofig)
-[(1250,True,(800,800)),(1250,True,(800,801)),(1250,True,(800,801)),(1250,True,(800,800)),(1250,True,(866,866)),(1250,True,(706,706))]
 -}
 checkPoseByEpsilon :: Int -> GPose -> [(Int, Bool, (GDist, GDist))]
 checkPoseByEpsilon ε (_,pos,fig)
@@ -133,6 +138,22 @@ checkPoseByEpsilon ε (_,pos,fig)
           where
             d  = dist seg
             d' = dist seg'
+{- |
+>>> hole = mkHole [(45,80),(35,95),(5,95),(35,50),(5,5),(35,5),(95,95),(65,95),(55,80)]
+>>> hole
+mkGraph [(0,(45,80)),(1,(35,95)),(2,(5,95)),(3,(35,50)),(4,(5,5)),(5,(35,5)),(6,(95,95)),(7,(65,95)),(8,(55,80))] [(0,1,((45,80),(35,95))),(1,2,((35,95),(5,95))),(2,3,((5,95),(35,50))),(3,4,((35,50),(5,5))),(4,5,((5,5),(35,5))),(5,6,((35,5),(95,95))),(6,7,((95,95),(65,95))),(7,8,((65,95),(55,80))),(8,0,((55,80),(45,80)))]
+>>> fig = mkGGraph [(10,93),(85,93),(50,60)] [(0,1,()),(0,2,()),(1,2,())]
+>>> fig
+mkGraph [(0,(10,93)),(1,(85,93)),(2,(50,60))] [(0,1,((10,93),(85,93))),(0,2,((10,93),(50,60))),(1,2,((85,93),(50,60)))]
+>>> isPoseHoleCrossing (undefined,fig,fig) hole
+True
+-}
+isPoseHoleCrossing :: GPose -> GHole -> Bool
+isPoseHoleCrossing (_, pose, _) hole 
+  = or [ intersect' pseg hseg | pseg <- psegs, hseg <- hsegs ]
+    where
+      psegs = map (segment pose) (G.labEdges pose)
+      hsegs = map (segment hole) (G.labEdges hole)
 
 -- | 頂点の座標
 coord :: GVertex -> GridPoint
