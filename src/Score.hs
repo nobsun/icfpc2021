@@ -5,7 +5,7 @@ module Score
   , possibleLengthRange
   ) where
 
-import Graph
+import Types
 
 {- | squared distance
 >>> sqrDistance ((30, 40), (35, 50))

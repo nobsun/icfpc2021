@@ -5,40 +5,28 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS -Wno-unused-top-binds #-}
-module Graph
-  ( GridPoint
-  , GSegment
-  , GVertex
-  , GEdge
-  , GHole
-  , GFigure
-  , GProblem
-  , GEpsilon
-  , ghole
-  , gfigure
-  , gepsilon
-  , segment
-  ) where
+module Graph where
 
 import Data.Maybe
 import qualified Data.Graph.Inductive as G
 import qualified Parser as P
+import Segment
+import Types
 
 -- | 格子点
-type GridPoint = (Int, Int)
 
 pointToGridPoint :: P.Point -> GridPoint
 pointToGridPoint = \ case
   P.Point x y -> (x, y)
 
 -- | 線分
-type GSegment   = (GridPoint, GridPoint)
+-- type GSegment   = (GridPoint, GridPoint)
 
 -- | 頂点
 type GVertex = G.LNode GridPoint
 
 -- | 辺
-type GEdge   = G.LEdge Dist
+type GEdge   = G.LEdge GDist
 
 pedgeToGedge :: P.Edge -> GEdge
 pedgeToGedge = \ case
@@ -51,7 +39,7 @@ gedgeToPedge (s,e,_) = P.Edge s e
 type GHole = G.Gr GridPoint ()
 
 -- | 人形
-type GFigure = G.Gr GridPoint Dist
+type GFigure = G.Gr GridPoint GDist
 {- $setup
 >>> import Data.Aeson
 >>> :set -XOverloadedStrings
@@ -68,6 +56,7 @@ pfigToGfig = \ case
 
 -- | ε
 type GEpsilon = Int
+
 -- | 問題
 type GProblem = (GHole, GFigure, GEpsilon)
 
@@ -90,13 +79,13 @@ mkFigure :: [GridPoint] -> P.Edges -> GFigure
 mkFigure vs es = G.emap dist $ G.mkGraph (G.labNodes g) 
                $ map (\ e@(s,t,_) -> (s,t,segment g e)) (G.labEdges g)
   where
-    g :: G.Gr GridPoint Dist
+    g :: G.Gr GridPoint GDist
     g = G.mkGraph ns les
     ns  = zip [0 ..] vs
     les = map pedgeToGedge es
 
 -- | 辺から線分へ
-segment :: G.Gr GridPoint Dist -> GEdge -> GSegment
+segment :: G.Gr GridPoint GDist -> GEdge -> GSegment
 segment g e = case e of
   (m, n, _) -> (fromJust (G.lab g m), fromJust (G.lab g n))
 
@@ -116,7 +105,7 @@ pposeToGpose (pfig, ppose) = case ppose of
 >>> checkPoseByEpsilon 1250 (undefined,[(15,0),(35,20),(0,24),(20,44),(29,19)],ofig)
 [(1250,True,(800,800)),(1250,True,(800,801)),(1250,True,(800,801)),(1250,True,(800,800)),(1250,True,(866,866)),(1250,True,(706,706))]
 -}
-checkPoseByEpsilon :: Int -> GPose -> [(Int, Bool, (Dist, Dist))]
+checkPoseByEpsilon :: Int -> GPose -> [(Int, Bool, (GDist, GDist))]
 checkPoseByEpsilon ε (_,gs,fig)
   = zipWith check oes pes'
     where
@@ -134,25 +123,11 @@ checkPoseByEpsilon ε (_,gs,fig)
 coord :: GVertex -> GridPoint
 coord = snd
 
--- | 辺の数
-size :: G.Gr GridPoint () -> Int
-size = G.size
+-- -- | 辺の数
+-- size :: G.Gr GridPoint a -> Int
+-- size = G.size
 
--- | 頂点の数
-order :: G.Gr GridPoint () -> Int
-order = G.order
-
--- | 自乗距離
-dist :: GSegment -> Dist
-dist (a, b) = ab · ab
-  where
-    ab = b − a
-
-(·) :: (Int, Int) -> (Int, Int) -> Int
-(xa, ya) · (xb, yb) = xa * xb + ya * yb
-
-type Dist = Int
-
-(−) :: GridPoint -> GridPoint -> GridPoint
-(xa, ya) − (xb, yb) = (xb - xa, yb - ya)
+-- -- | 頂点の数
+-- order :: G.Gr GridPoint a -> Int
+-- order = G.order
 

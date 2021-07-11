@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8f8ebe01e2a65d91678b062b69f626aa5ee6765f0e57aa1e961d3968181e8cdb
+-- hash: eb858f9d6f0d010c0bbee3fdbe9e0825175f0c2c47ee60abba79a1f2de6c042d
 
 name:           icfpc2021
 version:        0.1.0.0
@@ -48,6 +48,7 @@ library
       Solver.BackTracking
       Solver.SMT
       TwoDim
+      Types
   other-modules:
       Paths_icfpc2021
   hs-source-dirs:
