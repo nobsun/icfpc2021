@@ -2,7 +2,6 @@
 {-# LANGUAGE RecordWildCards #-}
 module PoseInfo where
 
-import Control.Monad (forM_)
 import Text.Printf (printf)
 
 import qualified Hole
@@ -124,4 +123,3 @@ dislike hole Pose{pose'vertices}= Score.dislike (hole',pose')
   where
     hole' = map pointToTuple hole
     pose' = map pointToTuple pose'vertices
-
