@@ -20,7 +20,6 @@ module Graph
   , gepsilon
   ) where
 
-import Data.Aeson
 import Data.Maybe
 import qualified Data.Graph.Inductive as G
 import qualified Parser as P
@@ -53,9 +52,12 @@ type GHole = G.Gr GridPoint ()
 
 -- | 人形
 type GFigure = G.Gr GridPoint Dist
+{- $setup
+>>> import Data.Aeson
+>>> :set -XOverloadedStrings
+-}
 
 {- |
->>> :set -XOverloadedStrings
 >>> Just fig = decode "{\"edges\":[[0,1],[0,2],[1,3],[2,3],[2,4],[3,4]],\"vertices\":[[0,20],[20,0],[20,40],[40,20],[49,45]]}" :: Maybe P.Figure
 >>> pfigToGfig fig
 mkGraph [(0,(0,20)),(1,(20,0)),(2,(20,40)),(3,(40,20)),(4,(49,45))] [(0,1,800),(0,2,800),(1,3,800),(2,3,800),(2,4,866),(3,4,706)]
@@ -107,7 +109,6 @@ pposeToGpose (pfig, ppose) = case ppose of
   P.Pose bonus vs -> (bonus, map pointToGridPoint vs, pfigToGfig pfig)
 
 {- |
->>> :set -XOverloadedStrings
 >>> Just fig = decode "{\"edges\":[[0,1],[0,2],[1,3],[2,3],[2,4],[3,4]],\"vertices\":[[0,20],[20,0],[20,40],[40,20],[49,45]]}" :: Maybe P.Figure
 >>> ofig = pfigToGfig fig
 >>> checkPoseByEpsilon 1250 (undefined,[(15,0),(35,20),(0,24),(20,44),(30,19)],ofig)
