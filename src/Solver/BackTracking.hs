@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Solver.BackTracking
-( solve, Bk(..), mkBk, move, sample1, sample2, sample3 )
+( solve, Bk(..), mkBk, move, autoTuneEdges, sample1, sample2, sample3 )
 where
 
 import Data.Maybe (listToMaybe, maybeToList)
@@ -15,7 +15,7 @@ import qualified Data.Map as Map
 import Types
 import qualified Parser as P
 --import qualified Segment as S (intersect)
---import qualified Score as Score (tolerant)
+import qualified Score as Score (tolerant)
 
 --import Debug.Trace
 
@@ -156,6 +156,38 @@ nextp (x,y) (dx,dy) _eps =
 distance :: GridPoint -> GridPoint -> Int
 distance (a,b) (c,d) =
   (a-c)^(2::Int) + (b-d)^(2::Int)
+
+autoTuneEdges :: Bk -> Bk
+autoTuneEdges =
+  go 10000
+  where
+    go 0 bk = bk
+    go n bk = case autoTuneEdge1 bk of
+                 Nothing -> bk
+                 Just bk'-> go (n-1) bk'
+
+autoTuneEdge1 :: Bk -> Maybe Bk
+autoTuneEdge1 bk@Bk{graph=g, vertices=vmap, epsilon=eps} =
+  case take 1 tune of
+    []         -> Nothing
+    [(p, pos)] -> Just bk{vertices=Map.insert p pos vmap}
+  where
+    invalidNodes = [(p,q,spq) | (p,q,spq) <-G.labEdges g, not $ Score.tolerant eps ((0,0),spq) (vmap Map.! p, vmap Map.! q)]
+    adjs = [(dx,dy) | d<-[1,2..], dx<-[-d,-d+1..d], dy<-[-d,-d+1..d], (abs dx)+(abs dy)>=d]
+
+    tune :: [(Int,GridPoint)]
+    tune = [ if pok then (p, (p1+dx,p2+dy)) else (q, (q1+dx,q2+dy))
+           | (p,q,spq) <- invalidNodes
+           , let (p1,p2) = vmap Map.! p
+           , let (q1,q2) = vmap Map.! q
+           , (dx,dy)<-take 400 adjs
+           , let pok = Score.tolerant eps ((0,0),spq) ((p1+dx,p2+dy),(q1,q2))
+           , let qok = Score.tolerant eps ((0,0),spq) ((p1,p2),(q1+dx,q2+dy))
+           , pok || qok
+           ]
+
+
+
 
 
 ---------------------------------------------------------------------------

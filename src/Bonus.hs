@@ -4,14 +4,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Bonus where
 
-import Data.Aeson
+-- import Data.Aeson
 import System.FilePath
 import Text.Printf
 import qualified Data.Graph.Inductive as G
 import Parser as P
-import Graph
+-- import Graph
 
-{- | 
+{- |
 >>> path = "data/problems"
 >>> bonusdepg = getBonusDeps path 106
 >>> G.labEdges <$> bonusdepg
@@ -25,9 +25,9 @@ getBonusDeps path n = loop path n 1 ig
     ig = G.mkGraph (zip [1 .. n] (repeat ())) []
 
 loop :: FilePath -> Int -> Int -> G.Gr () P.BonusDef -> IO (G.Gr () P.BonusDef)
-loop path no count g = if 
+loop path no count g = if
   | no < count -> return g
-  | otherwise  -> do 
+  | otherwise  -> do
       { mprob <- getProblem path count
       ; loop path no (succ count) (G.insEdges (bonusEdges count mprob) g)
       }
@@ -38,10 +38,10 @@ getProblem path n = readProblem (path </> name)
     name = printf "%03d.json" n
 
 bonusEdges :: G.Node -> Maybe P.Problem -> [G.LEdge P.BonusDef]
-bonusEdges n = \ case
+bonusEdges n0 = \ case
   Nothing -> []
   Just pb -> case P.bonuses pb of
     Nothing -> []
-    Just bs -> map (bonusDef2Edge n) bs
+    Just bs -> map (bonusDef2Edge n0) bs
   where
     bonusDef2Edge n def = (n, P.problem def, def)

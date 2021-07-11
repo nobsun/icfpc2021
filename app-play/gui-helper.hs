@@ -31,16 +31,16 @@ import           Control.Monad.RWS.Strict       ( RWST
 import qualified Data.Aeson                    as A
 import qualified Data.ByteString.Lazy.Char8    as BLC
 import           Data.Function                  ( on )
+import qualified Data.Map                      as Map
 import           Data.Maybe                     ( catMaybes
                                                 , fromMaybe
                                                 )
 import           Data.StateVar                  ( ($=) )
 import           Options.Applicative
-import           System.IO                      ( hPutStrLn
-                                                , stdout
-                                                , stderr
+import           System.IO                      ( BufferMode(LineBuffering)
                                                 , hSetBuffering
-                                                , BufferMode (LineBuffering)
+                                                , stderr
+                                                , stdout
                                                 )
 import           Text.Printf                    ( printf )
 
@@ -51,6 +51,8 @@ import qualified Graphics.Rendering.OpenGL.GL.Points
                                                as GL.Points
 import qualified Graphics.UI.GLFW              as GLFW
 
+import           Data.List                      ( minimumBy )
+import           GHC.IO                         ( evaluate )
 import qualified Hole
 import qualified Parser                        as P
 import           Parser                         ( Figure(..) )
@@ -59,8 +61,8 @@ import           PoseInfo                       ( PoseEdgeInfo(..)
                                                 , PoseVertexInfo(..)
                                                 )
 import qualified PoseInfo
+import qualified Solver.BackTracking           as Bk
 import qualified TwoDim
-import Data.List
 
 --------------------------------------------------------- -----------------------
 
@@ -83,8 +85,8 @@ data State = State
   , stateDislike          :: !Int
   , stateSelectedVertexId :: Maybe Int
   , stateSelectedEdgeId   :: Maybe Int
-  , stateHistory          :: [(Int, Int)]
-    -- , stateMouseBottonPressed :: Bool
+  , stateUndoQueue        :: [P.Pose]
+  , stateRedoQueue        :: [P.Pose]
   }
 
 type Demo = RWST Env () State IO
@@ -208,7 +210,8 @@ main = do
                        , stateDislike          = 0
                        , stateSelectedVertexId = Nothing
                        , stateSelectedEdgeId   = Nothing
-                       , stateHistory          = []
+                       , stateUndoQueue        = []
+                       , stateRedoQueue        = []
                        }
 
     runDemo env state_
@@ -309,9 +312,7 @@ run = do
   q   <- liftIO $ GLFW.windowShouldClose win
   if q
     then do
-      state <- get
-      liftIO $ hPutStrLn stderr $ "history: " ++ show
-        (reverse (stateHistory state))
+      pure ()
     else do
       run
 
@@ -354,8 +355,8 @@ processEvent ev = case ev of
 
   (EventMouseButton _ mb mbs mk) -> do
     printEvent "mouse button" [show mb, show mbs, showModifierKeys mk]
-    poseInfo@PoseInfo { .. } <- gets statePose
-    (x, y)                               <- getCursorPos
+    poseInfo@PoseInfo {..} <- gets statePose
+    (x, y)                 <- getCursorPos
     when (mb == GLFW.MouseButton'1 && mbs == GLFW.MouseButtonState'Pressed) $ do
       gets stateSelectedVertexId >>= \case
         Nothing -> do
@@ -373,35 +374,21 @@ processEvent ev = case ev of
                   newPose     = updatePosOf vnum (P.Point x y) currentPose
               problem <- asks envProblem
               liftIO $ putStrLn $ "selected: " <> show vnum
-              modify $ \s -> s { statePose = PoseInfo.verifyPose problem newPose
-                               , stateSelectedVertexId = Nothing
-                               }
+              modify $ \s -> s { stateSelectedVertexId = Nothing }
+              updateStatePoseInfo $ PoseInfo.verifyPose problem newPose
     when (mb == GLFW.MouseButton'2 && mbs == GLFW.MouseButtonState'Pressed) $ do
       gets stateSelectedEdgeId >>= \case
         Nothing -> do
-          let e = nearestEdge (x,y) poseInfo poseEdgeInfo
+          let e = nearestEdge (x, y) poseInfo poseEdgeInfo
           modify $ \s -> s { stateSelectedEdgeId = Just (edgeId e) }
         Just _ -> do
           modify $ \s -> s { stateSelectedEdgeId = Nothing }
     draw
 
   EventCursorPos{} -> do
-    (x, y)   <- getCursorPos
-    win      <- asks envWindow
-    poseInfo <- gets statePose
+    (x, y) <- getCursorPos
+    win    <- asks envWindow
     liftIO $ GLFW.setWindowTitle win $ "ICFPc 2021: cursor = " ++ show (x, y)
-    when False $ do -- 重すぎた。10回に一回とかにすればよい？あるいはQueueのつまり具合を見るか
-      gets stateSelectedVertexId >>= \case
-        Nothing -> do
-          pure ()
-        Just vnum -> do
-          let currentPose = poseOfPoseInfo poseInfo
-              newPose     = updatePosOf vnum (P.Point x y) currentPose
-          problem <- asks envProblem
-          modify $ \s -> s { statePose = PoseInfo.verifyPose problem newPose
-                           , stateSelectedVertexId = Nothing
-                           }
-      draw
 
   (EventCursorEnter _ cs) -> do
     printEvent "cursor enter" [show cs]
@@ -429,6 +416,16 @@ processEvent ev = case ev of
       'r' -> rotatePose
       'f' -> fold True
       'g' -> fold False
+      't' -> tune
+      '!' -> do
+        probNum  <- optProblemNumber <$> asks envOptions
+        poseInfo <- gets statePose
+        liftIO $ do
+          let jsonFn = printf "helper-%d.json" probNum
+          BLC.writeFile jsonFn $ A.encode $ poseOfPoseInfo poseInfo
+          putStrLn $ "Pose JSON saved: " ++ jsonFn
+      'u' -> undo
+      'i' -> redo
       _   -> pure ()
    where
     movePose (dx, dy, mx, my) = do
@@ -437,39 +434,74 @@ processEvent ev = case ev of
       let vs' = [ P.Point (mx * (x + dx)) (my * (y + dy)) | P.Point x y <- vs ]
           newPose = P.Pose b vs'
           newPoseInfo = PoseInfo.verifyPose problem newPose
-      modify $ \s -> s { statePose = newPoseInfo }
+      updateStatePoseInfo newPoseInfo
       draw
     rotatePose = do
       problem     <- asks envProblem
-      P.Pose b vs <- gets (poseOfPoseInfo . statePose)
-      let vs'         = map rotatePoint vs
+      pose@(P.Pose b vs) <- gets (poseOfPoseInfo . statePose)
+      let cp          = PoseInfo.centerPos pose
+          vs'         = map (rotatePoint cp) vs
           newPose     = P.Pose b vs'
           newPoseInfo = PoseInfo.verifyPose problem newPose
-      modify $ \s -> s { statePose = newPoseInfo }
+      updateStatePoseInfo newPoseInfo
       draw
     fold b = gets stateSelectedEdgeId >>= \case
-      Nothing -> pure ()
+      Nothing  -> pure ()
       Just eid -> do
-        problem     <- asks envProblem
+        problem  <- asks envProblem
         poseInfo <- gets statePose
-        let (v1,v2) = edgeEndpoints poseInfo eid
-            overTheEdge (P.Point x y) =
-              let P.Point x1 y1 = v1
-                  P.Point x2 y2 = v2
-              in if b then TwoDim.line ((x1,y1),(x2,y2)) (x,y) > 0
-                      else TwoDim.line ((x1,y1),(x2,y2)) (x,y) < 0
-            P.Pose bonus vs = poseOfPoseInfo poseInfo
-            vs' = flip map vs $ \v ->
-              if overTheEdge v
-              then foldPointAgainst (v1,v2) v
-              else v
-            newPose = P.Pose bonus vs'
-            newPoseInfo = PoseInfo.verifyPose problem newPose
-        modify $ \s -> s { statePose = newPoseInfo }
+        let
+          (v1, v2) = edgeEndpoints poseInfo eid
+          overTheEdge (P.Point x y) =
+            let P.Point x1 y1 = v1
+                P.Point x2 y2 = v2
+            in  if b
+                  then TwoDim.line ((x1, y1), (x2, y2)) (x, y) > 0
+                  else TwoDim.line ((x1, y1), (x2, y2)) (x, y) < 0
+          P.Pose bonus vs = poseOfPoseInfo poseInfo
+          vs'             = flip map vs
+            $ \v -> if overTheEdge v then foldPointAgainst (v1, v2) v else v
+          newPose     = P.Pose bonus vs'
+          newPoseInfo = PoseInfo.verifyPose problem newPose
+        updateStatePoseInfo newPoseInfo
+        draw
+    tune = do
+      problem <-asks envProblem
+      state <- get
+      let currentPose = poseOfPoseInfo (statePose state)
+          initBk = Bk.mkBk problem
+          bk = initBk{Bk.vertices=Map.fromList (zip [0..] $ map PoseInfo.pointToTuple $ P.pose'vertices currentPose)}
+          bk' = Bk.autoTuneEdges bk
+          newPose = currentPose{P.pose'vertices=map (\(x,y)->P.Point x y) $ Map.elems $ Bk.vertices bk'}
+      updateStatePoseInfo (PoseInfo.verifyPose problem newPose)
+      draw
+    undo = gets stateUndoQueue >>= \case
+      [] -> do
+        liftIO $ putStrLn "empty undo queue"
+      u : us -> do
+        problem <- asks envProblem
+        modify $ \s ->
+          let currentPose = poseOfPoseInfo (statePose s)
+          in  s { statePose      = PoseInfo.verifyPose problem u
+                , stateUndoQueue = us
+                , stateRedoQueue = currentPose : stateRedoQueue s
+                }
+        draw
+    redo = gets stateRedoQueue >>= \case
+      [] -> do
+        liftIO $ putStrLn "empty redo queue"
+      r : rs -> do
+        problem <- asks envProblem
+        modify $ \s ->
+          let currentPose = poseOfPoseInfo (statePose s)
+          in  s { statePose      = PoseInfo.verifyPose problem r
+                , stateUndoQueue = currentPose : stateUndoQueue s
+                , stateRedoQueue = rs
+                }
         draw
 
-rotatePoint :: P.Point -> P.Point
-rotatePoint (P.Point x y) = P.Point y (-x)
+rotatePoint :: P.Point -> P.Point -> P.Point
+rotatePoint (P.Point cx cy) (P.Point x y) = P.Point (y-cy+cx) (-(x-cx)+cy)
 
 -- 格子点なので正確にはならない
 foldPointAgainst :: (P.Point, P.Point) -> P.Point -> P.Point
@@ -495,19 +527,19 @@ nearestEdge (x, y) poseInfo es = minimumBy (compare `on` distance) es
  where
   distance e =
     let P.Point ex ey = edgeMidPoint poseInfo (edgeId e)
-    in (x - ex) ^ (2 :: Int) + (y - ey) ^ (2 :: Int)
+    in  (x - ex) ^ (2 :: Int) + (y - ey) ^ (2 :: Int)
 
 edgeEndpoints :: PoseInfo -> Int -> (P.Point, P.Point)
-edgeEndpoints PoseInfo{..} eid =
-  let (f,t) = edgeFromTo (poseEdgeInfo!!eid)
-      PoseVertexInfo _ p1 = poseVertexInfo!!f
-      PoseVertexInfo _ p2 = poseVertexInfo!!t
-  in (p1,p2)
+edgeEndpoints PoseInfo {..} eid =
+  let (f, t)              = edgeFromTo (poseEdgeInfo !! eid)
+      PoseVertexInfo _ p1 = poseVertexInfo !! f
+      PoseVertexInfo _ p2 = poseVertexInfo !! t
+  in  (p1, p2)
 
 edgeMidPoint :: PoseInfo -> Int -> P.Point
 edgeMidPoint poseInfo eid =
   let (P.Point x1 y1, P.Point x2 y2) = edgeEndpoints poseInfo eid
-  in P.Point ((x1 + x2) `div` 2) ((y1 + y2) `div` 2 )
+  in  P.Point ((x1 + x2) `div` 2) ((y1 + y2) `div` 2)
 
 getCursorPos :: Demo (Int, Int)
 getCursorPos = do
@@ -517,9 +549,9 @@ getCursorPos = do
   width  <- gets stateWindowWidth
   height <- gets stateWindowHeight
   (x, y) <- liftIO $ GLFW.getCursorPos win
-  let x' = round x * (2 * _MARGIN + sizeX) `div` width  - _MARGIN
+  let x' = round x * (2 * _MARGIN + sizeX) `div` width - _MARGIN
   let y' = round y * (2 * _MARGIN + sizeY) `div` height - _MARGIN
-  pure (x' `div` _Bairitsu , y' `div` _Bairitsu)
+  pure (x' `div` _Bairitsu, y' `div` _Bairitsu)
 
 adjustWindow :: Demo ()
 adjustWindow = do
@@ -534,10 +566,10 @@ adjustWindow = do
     GL.viewport GL.$= (pos, size)
     GL.matrixMode GL.$= GL.Projection
     GL.loadIdentity
-    GL.ortho (fromIntegral (- _MARGIN))
+    GL.ortho (fromIntegral (-_MARGIN))
              (fromIntegral (sizeX + _MARGIN))
              (fromIntegral (sizeY + _MARGIN))
-             (fromIntegral (- _MARGIN))
+             (fromIntegral (-_MARGIN))
              (-1.5)
              (1.5 :: GL.GLdouble)
   draw
@@ -551,9 +583,8 @@ envHole Env { envProblem = P.Problem {..} } = hole
 draw :: Demo ()
 draw = do
   -- [CLI]
-  PoseInfo{poseEdgeInfo, poseDislikes} <- gets statePose
+  PoseInfo { poseEdgeInfo, poseDislikes, poseIsValid } <- gets statePose
   mEdgeId <- gets stateSelectedEdgeId
-  liftIO $ putStrLn $ "dislikes: " <> show poseDislikes
   liftIO $ putStrLn "    edge     length   possible_range  tolerant included"
   forM_ poseEdgeInfo $ \e -> do
     let h | Just (edgeId e) == mEdgeId = "[*] "
@@ -561,6 +592,8 @@ draw = do
     liftIO $ do
       putStr h
       PoseInfo.reportEdgeInfo e
+  liftIO $ putStrLn $ "validPose: " <> show poseIsValid
+  liftIO $ putStrLn $ "dislikes:  " <> show poseDislikes
   -- [CLI END]
   env <- ask
   let hole = envHole env
@@ -581,14 +614,13 @@ draw = do
     GL.renderPrimitive GL.Points $ mapM_ (GL.vertex . toV) hole
     -- [bonuses]
     case P.bonuses (envProblem env) of
-      Nothing -> pure ()
-      Just bonuses -> forM_ bonuses $ \P.BonusDef{position} -> do
+      Nothing      -> pure ()
+      Just bonuses -> forM_ bonuses $ \P.BonusDef { position } -> do
         GL.Points.pointSize $= 10
         GL.color (GL.Color3 1 0 1 :: GL.Color3 GL.GLfloat)
         GL.renderPrimitive GL.Points $ GL.vertex (toV position)
   drawPose (envProblem env) (statePose state)
-  liftIO $
-    GLFW.swapBuffers (envWindow env)
+  liftIO $ GLFW.swapBuffers (envWindow env)
 
 drawPose :: P.Problem -> PoseInfo -> Demo ()
 drawPose P.Problem {..} PoseInfo {..} = do
@@ -603,7 +635,7 @@ drawPose P.Problem {..} PoseInfo {..} = do
       GL.color color
       GL.renderPrimitive GL.Lines $ mapM_ GL.vertex (toE (edgePos edgeFromTo))
     gets stateSelectedVertexId >>= \case
-      Nothing -> pure ()
+      Nothing  -> pure ()
       Just vid -> do
         let v = poseVertexInfo !! vid
         liftIO $ do
@@ -615,7 +647,8 @@ drawPose P.Problem {..} PoseInfo {..} = do
   lookup' x = vertexPos (poseVertexInfo !! x)
 
 toV :: P.Point -> GL.Vertex2 GL.GLdouble
-toV (P.Point x y) = GL.Vertex2 (fromIntegral (_Bairitsu * x)) (fromIntegral (_Bairitsu * y))
+toV (P.Point x y) =
+  GL.Vertex2 (fromIntegral (_Bairitsu * x)) (fromIntegral (_Bairitsu * y))
 
 toE :: (P.Point, P.Point) -> [GL.Vertex2 GL.GLdouble]
 toE (s, e) = [toV s, toV e]
@@ -647,3 +680,15 @@ poseOfPoseInfo PoseInfo { poseVertexInfo } = P.Pose Nothing vs
 updatePosOf :: Int -> P.Point -> P.Pose -> P.Pose
 updatePosOf vertexId newPos (P.Pose b vs) =
   let (xs, _ : ys) = splitAt vertexId vs in P.Pose b $ xs ++ newPos : ys
+
+updateStatePoseInfo :: PoseInfo -> Demo ()
+updateStatePoseInfo poseInfo = do
+  State { stateUndoQueue, statePose } <- get
+  let currentPose  = poseOfPoseInfo statePose
+      newUndoQueue = take 1000 $ currentPose : stateUndoQueue
+  newUndoQueue' <- liftIO $ evaluate newUndoQueue -- サンクを潰す
+  modify $ \s -> s { statePose      = poseInfo
+                   , stateUndoQueue = newUndoQueue'
+                   , stateRedoQueue = []
+                   }
+

@@ -2,7 +2,6 @@
 {-# LANGUAGE RecordWildCards #-}
 module PoseInfo where
 
-import Control.Monad (forM_)
 import Text.Printf (printf)
 
 import qualified Hole
@@ -20,6 +19,7 @@ data PoseInfo = PoseInfo
   { poseVertexInfo :: [PoseVertexInfo]
   , poseEdgeInfo   :: [PoseEdgeInfo]
   , poseDislikes   :: Int
+  , poseIsValid    :: Bool
   }
   deriving Show
 
@@ -64,6 +64,8 @@ verifyPose Problem { hole, figure, epsilon } pose@(Pose _bonus poseVertices) =
                     ]
             in PoseEdgeInfo { .. }
         poseDislikes = dislike hole pose
+        poseIsValid = all valid poseEdgeInfo
+          where valid PoseEdgeInfo{..} = tolerant && included
       in PoseInfo {..}
 
 reportPose :: PoseInfo -> IO ()
@@ -122,3 +124,8 @@ dislike hole Pose{pose'vertices}= Score.dislike (hole',pose')
     hole' = map pointToTuple hole
     pose' = map pointToTuple pose'vertices
 
+centerPos :: P.Pose -> Point
+centerPos Pose{pose'vertices} =
+  P.Point (center (map P.x pose'vertices)) (center (map P.y pose'vertices))
+  where
+    center ps = sum ps `div` length ps

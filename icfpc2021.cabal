@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.34.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5edb9fedced90c07e863eacae9dca0e446562536aa73ed9b5bb5a8ff78c99591
+-- hash: 738e27fa2e79b30171467fbae6486c84b25951469188a43771e7735b10188074
 
 name:           icfpc2021
 version:        0.1.0.0
@@ -41,7 +41,6 @@ library
       Bonus
       Graph
       Hole
-      Lib
       Parser
       PoseInfo
       Score
@@ -103,21 +102,6 @@ executable gui-helper
     ghc-options: -static
   default-language: Haskell2010
 
-executable icfpc2021
-  main-is: Main.hs
-  other-modules:
-      Paths_icfpc2021
-  hs-source-dirs:
-      app
-  ghc-options: -rtsopts
-  build-depends:
-      aeson
-    , base >=4.7 && <5
-    , bytestring
-    , filepath
-    , icfpc2021
-  default-language: Haskell2010
-
 executable play-gui
   main-is: play-gui.hs
   hs-source-dirs:
@@ -139,6 +123,7 @@ executable play-gui
       , optparse-applicative
       , pretty
       , process
+      , random
       , stm
       , transformers
     buildable: True
