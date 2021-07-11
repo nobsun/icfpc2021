@@ -10,6 +10,8 @@ module TwoDim (
 
   intersect',
   intersect,
+
+  line,
   ) where
 
 type Vec a = (a, a)

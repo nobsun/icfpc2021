@@ -70,7 +70,10 @@ reportPose :: PoseInfo -> IO ()
 reportPose PoseInfo{poseEdgeInfo, poseDislikes} = do
   putStrLn $ "dislikes: " <> show poseDislikes
   putStrLn "edge     length   possible_range  tolerant included"
-  forM_ poseEdgeInfo $ \PoseEdgeInfo{..} -> do
+  mapM_ reportEdgeInfo poseEdgeInfo
+
+reportEdgeInfo :: PoseEdgeInfo -> IO ()
+reportEdgeInfo PoseEdgeInfo{..} = do
     putStr $ printf "[%02d--%02d] " (fst edgeFromTo) (snd edgeFromTo)
     putStr $ printf "%6d   " actualLength
     putStr $ printf "(%6d,%6d)    " (fst possibleLengthRange) (snd possibleLengthRange)
@@ -80,6 +83,7 @@ reportPose PoseInfo{poseEdgeInfo, poseDislikes} = do
  where
   mark True  = "✔"
   mark False = "✘"
+
 
 {-# ANN isValidPose "HLint: ignore Use &&" #-}
 isValidPose :: P.Problem -> Pose -> Bool

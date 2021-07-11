@@ -11,7 +11,7 @@ gui: icfpc2021.cabal
 	cabal v1-build $(jobs)
 
 check: icfpc2021.cabal
-	cabal v1-configure $(oflag) --enable-tests
+	cabal v1-configure $(oflag) -f gui --enable-tests
 	cabal v1-build $(jobs)
 	cabal v1-test
 
@@ -25,7 +25,7 @@ icfpc2021.cabal: package.yaml
 
 clean:
 ##	dirty hack for 'configure' required case
-	if cabal v1-clean; then cabal v1-configure; cabal v1-clean; fi
+	if ! cabal v1-clean; then cabal v1-configure; cabal v1-clean; fi
 
 v2-clean:
 	cabal v2-clean

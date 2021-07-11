@@ -88,14 +88,20 @@ pfigToGfig = \ case
 type GEpsilon = Int
 
 -- | 問題
-type GProblem = (GHole, GFigure, GEpsilon)
+type GProblem = (Maybe [P.BonusDef], GHole, GFigure, GEpsilon)
 
+pprobToGProb :: P.Problem -> GProblem
+pprobToGProb = \ case
+  P.Problem bonus hole fig eps -> (bonus, pholeToGHole hole, pfigToGfig fig, eps)
+
+gbonus :: GProblem -> Maybe [P.BonusDef]
+gbonus (b,_,_,_) = b
 ghole :: GProblem -> GHole
-ghole (h,_,_) = h
+ghole (_,h,_,_) = h
 gfigure :: GProblem -> GFigure
-gfigure (_,f,_) = f
+gfigure (_,_,f,_) = f
 gepsilon :: GProblem -> GEpsilon
-gepsilon (_,_,e) = e
+gepsilon (_,_,_,e) = e
 
 mkFigure :: [GridPoint] -> P.Edges -> GFigure
 mkFigure vs es = mkGGraph vs (map pedgeToGedge es)

@@ -137,6 +137,9 @@ main = do
 
     eventsChan <- newTQueueIO :: IO (TQueue Event)
 
+    hSetBuffering stdout LineBuffering
+    hSetBuffering stderr LineBuffering
+
     withWindow width height "ICFPc 2021" $ \win -> do
         GLFW.setErrorCallback               $ Just $ errorCallback           eventsChan
         GLFW.setWindowPosCallback       win $ Just $ windowPosCallback       eventsChan
