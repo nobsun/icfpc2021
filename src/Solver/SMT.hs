@@ -26,12 +26,13 @@ solve prob = do
 
   Z3.evalZ3 $ do
     zero <- Z3.mkIntNum (0 :: Int)
-    one <- Z3.mkIntNum (1 :: Int)
-    two <- Z3.mkIntNum (2 :: Int)
 
     pointVars <- liftM V.fromList $ forM (zip [(0::Int)..] (V.toList vs)) $ \(i, _) -> do
       x <- Z3.mkIntVar =<< Z3.mkStringSymbol ("x" ++ show i)
       y <- Z3.mkIntVar =<< Z3.mkStringSymbol ("y" ++ show i)
+      x' <- Z3.mkInt2Real x
+      y' <- Z3.mkInt2Real y
+      assertIsInside (x',y') hole
       return (x,y)
 
     edgeVars <- liftM V.fromList $ forM (zip [(0::Int)..] es) $ \(i, P.Edge s t) -> do
@@ -64,53 +65,6 @@ solve prob = do
       Z3.solverAssertCnstr =<< Z3.mkLe d max_d'
 
       return (dx,dy,dx2,dy2)
-
-    forM_ (zip [0..] (V.toList vs)) $ \(i, _) -> do
-       let (x', y') = pointVars V.! i
-
-       isOn <- forM (zip hole (tail hole ++ [head hole])) $ \(P.Point x1 y1, P.Point x2 y2) -> do
-         x1' <- Z3.mkIntNum x1
-         y1' <- Z3.mkIntNum y1
-         x2' <- Z3.mkIntNum x2
-         y2' <- Z3.mkIntNum y2
-         cond1 <- case compare y1 y2 of
-                    EQ -> Z3.mkEq y1' y'
-                    LT -> Z3.mkAnd =<< sequence [Z3.mkLe y1' y', Z3.mkLe y' y2']
-                    GT -> Z3.mkAnd =<< sequence [Z3.mkLe y2' y', Z3.mkLe y' y1']
-         cond2 <-
-           if y1 == y2 then
-             Z3.mkAnd =<< sequence (if x1 <= x2 then [Z3.mkLe x1' x', Z3.mkLe x' x2'] else [Z3.mkLe x2' x', Z3.mkLe x' x1'])
-           else do
-             lhs <- Z3.mkInt2Real x'
-             rhs <- Z3.mkAdd =<< sequence [Z3.mkInt2Real x1', Z3.mkMul =<< sequence [Z3.mkInt2Real =<< Z3.mkSub [y', y1'], Z3.mkRational (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))]]
-             Z3.mkEq lhs rhs
-         cond <- Z3.mkAnd [cond1, cond2]
-         return cond
-
-       cpTerms <- forM (zip hole (tail hole ++ [head hole])) $ \(P.Point x1 y1, P.Point x2 y2) -> do
-         x1' <- Z3.mkIntNum x1
-         y1' <- Z3.mkIntNum y1
-         x2' <- Z3.mkIntNum x2
-         y2' <- Z3.mkIntNum y2
-         cond1 <- case compare y1 y2 of
-                    EQ -> Z3.mkEq y1' y'
-                    LT -> Z3.mkAnd =<< sequence [Z3.mkLe y1' y', Z3.mkLt y' y2']
-                    GT -> Z3.mkAnd =<< sequence [Z3.mkLe y2' y', Z3.mkLt y' y1']
-         cond2 <-
-           if y1 == y2 then
-             Z3.mkAnd =<< sequence (if x1 <= x2 then [Z3.mkLe x1' x', Z3.mkLe x' x2'] else [Z3.mkLe x2' x', Z3.mkLe x' x1'])
-           else do
-             lhs <- Z3.mkInt2Real x'
-             rhs <- Z3.mkAdd =<< sequence [Z3.mkInt2Real x1', Z3.mkMul =<< sequence [Z3.mkInt2Real =<< Z3.mkSub [y', y1'], Z3.mkRational (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))]]
-             Z3.mkLt lhs rhs
-         cond <- Z3.mkAnd [cond1, cond2]
-         Z3.mkIte cond one zero
-
-       cp <- Z3.mkAdd cpTerms
-       condCP <- Z3.mkEq one =<< Z3.mkMod cp two
-       Z3.solverAssertCnstr =<< Z3.mkOr (isOn ++ [condCP])
-
-       return ()
 
     let loop :: Int -> Z3.Z3 (Maybe (V.Vector P.Point))
         loop !k = do
@@ -187,6 +141,54 @@ solve prob = do
     P.Figure{ P.edges = es, P.vertices = vs' } = P.figure prob
     vs = V.fromList vs'
     eps = P.epsilon prob
+
+
+assertIsInside :: (Z3.AST, Z3.AST) -> P.Hole -> Z3.Z3 ()
+assertIsInside (x', y') hole = do
+  zero <- Z3.mkIntNum (0 :: Int)
+  one <- Z3.mkIntNum (1 :: Int)
+  two <- Z3.mkIntNum (2 :: Int)
+
+  isOn <- forM (zip hole (tail hole ++ [head hole])) $ \(P.Point x1 y1, P.Point x2 y2) -> do
+    x1' <- Z3.mkIntNum x1
+    y1' <- Z3.mkIntNum y1
+    x2' <- Z3.mkIntNum x2
+    y2' <- Z3.mkIntNum y2
+    cond1 <- case compare y1 y2 of
+               EQ -> Z3.mkEq y1' y'
+               LT -> Z3.mkAnd =<< sequence [Z3.mkLe y1' y', Z3.mkLe y' y2']
+               GT -> Z3.mkAnd =<< sequence [Z3.mkLe y2' y', Z3.mkLe y' y1']
+    cond2 <-
+      if y1 == y2 then
+        Z3.mkAnd =<< sequence (if x1 <= x2 then [Z3.mkLe x1' x', Z3.mkLe x' x2'] else [Z3.mkLe x2' x', Z3.mkLe x' x1'])
+      else do
+        rhs <- Z3.mkAdd =<< sequence [pure x1', Z3.mkMul =<< sequence [Z3.mkSub [y', y1'], Z3.mkRational (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))]]
+        Z3.mkEq x' rhs
+    cond <- Z3.mkAnd [cond1, cond2]
+    return cond
+
+  cpTerms <- forM (zip hole (tail hole ++ [head hole])) $ \(P.Point x1 y1, P.Point x2 y2) -> do
+    x1' <- Z3.mkIntNum x1
+    y1' <- Z3.mkIntNum y1
+    x2' <- Z3.mkIntNum x2
+    y2' <- Z3.mkIntNum y2
+    cond <-
+      if y1 == y2 then
+        Z3.mkFalse
+      else do
+        cond1 <-
+          if y1 < y2 then
+            Z3.mkAnd =<< sequence [Z3.mkLe y1' y', Z3.mkLt y' y2']
+          else
+            Z3.mkAnd =<< sequence [Z3.mkLe y2' y', Z3.mkLt y' y1']
+        rhs <- Z3.mkAdd =<< sequence [pure x1', Z3.mkMul =<< sequence [Z3.mkSub [y', y1'], Z3.mkRational (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))]]
+        cond2 <- Z3.mkLt x' rhs
+        Z3.mkAnd [cond1, cond2]
+    Z3.mkIte cond one zero
+
+  cp <- Z3.mkAdd cpTerms
+  condCP <- Z3.mkEq one =<< Z3.mkMod cp two
+  Z3.solverAssertCnstr =<< Z3.mkOr (isOn ++ [condCP])
 
 
 distance :: P.Point -> P.Point -> Int
