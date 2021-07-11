@@ -1,13 +1,14 @@
 {-# LANGUAGE MultiWayIf #-}
 module Segment
   ( intersect
+  , intersect'
   , dist
   , (×)
   , (·)
   ) where
 
 import Prelude hiding (pi)
-import Graph ( GSegment, GridPoint )
+import Types ( GDist, GSegment, G2DVector, GridPoint )
 
 {- | 交差判定
 >>> a = (0,0)
@@ -38,12 +39,23 @@ intersect (p1, p2) (p3, p4)
     d3 = direction p1 p2 p3
     d4 = direction p1 p2 p4
 
+intersect' :: GSegment -> GSegment -> Bool
+intersect' (p1, p2) (p3, p4)
+  = if
+    | d1 * d2 < 0 && d3 * d4 < 0    -> True
+    | otherwise                     -> False
+  where
+    d1 = direction p3 p4 p1
+    d2 = direction p3 p4 p2
+    d3 = direction p1 p2 p3
+    d4 = direction p1 p2 p4
+
 -- | 外積
-(×) :: (Int, Int) -> (Int, Int) -> Int
+(×) :: G2DVector -> G2DVector -> Int
 (xa, ya) × (xb, yb) = xa * yb - xb * ya
 
 -- | 方向ベクトル
-(−) :: GridPoint -> GridPoint -> GridPoint
+(−) :: GridPoint -> GridPoint -> G2DVector
 (xa, ya) − (xb, yb) = (xb - xa, yb - ya)
 
 -- | i を要とした j と k の位置関係: 0 < なら ccw、< 0 なら cw、 zero なら 3点は同一直線上にある
@@ -55,7 +67,7 @@ onSegment :: GridPoint -> GridPoint -> GridPoint -> Bool
 onSegment (xi, yi) (xj, yj) (xk, yk) = min xi xj <= xk && xk <= max xi xj && min yi yj <= yk && yk <= max yi yj
 
 -- | 自乗距離
-dist :: GSegment -> Int
+dist :: GSegment -> GDist
 dist (a, b) = ab · ab
   where
     ab = b − a
