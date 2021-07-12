@@ -20,7 +20,7 @@ module Parser
     , BonusDef(..)
     , BonusType(..)
     , BonusUse (..)
-    , readProblem
+    , readProblem, readProblem'
     ) where
 
 import GHC.Generics (Generic)
@@ -37,6 +37,10 @@ import AesonArrayGeneric
 
 readProblem :: FilePath -> IO (Maybe Problem)
 readProblem fp = decode <$> LBS.readFile fp
+
+readProblem' :: String -> IO Problem
+readProblem' fp =
+  maybe (fail $ "fail to decode Program JSON: " ++ fp) return =<< readProblem fp
 
 
 {- $setup
