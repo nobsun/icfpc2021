@@ -74,6 +74,20 @@ reportPose PoseInfo{poseEdgeInfo, poseDislikes} = do
   putStrLn "edge     length   possible_range  tolerant included"
   mapM_ reportEdgeInfo poseEdgeInfo
 
+reportPoseInfo :: PoseInfo -> IO ()
+reportPoseInfo = reportPoseInfo_ ("", const "")
+
+reportPoseInfo_ :: (String, PoseEdgeInfo -> String) -> PoseInfo -> IO ()
+reportPoseInfo_ h poseInfo =
+  mapM_ putStrLn $ pprPoseInfo h poseInfo
+
+pprPoseInfo :: (String, PoseEdgeInfo -> String) -> PoseInfo -> [String]
+pprPoseInfo (header, edgeHeader) PoseInfo{poseEdgeInfo, poseDislikes, poseIsValid} =
+  [ header <> "edge     length   possible_range  tolerant included" ] ++
+  map (pprEdgeInfo edgeHeader) poseEdgeInfo ++
+  [ "validPose: " <> show poseIsValid,
+    "dislikes: " <> show poseDislikes ]
+
 reportEdgeInfo :: PoseEdgeInfo -> IO ()
 reportEdgeInfo PoseEdgeInfo{..} = do
     putStr $ printf "[%02d--%02d] " (fst edgeFromTo) (snd edgeFromTo)
@@ -86,6 +100,18 @@ reportEdgeInfo PoseEdgeInfo{..} = do
   mark True  = "✔"
   mark False = "✘"
 
+pprEdgeInfo :: (PoseEdgeInfo -> String) -> PoseEdgeInfo -> String
+pprEdgeInfo header e@PoseEdgeInfo{..} =
+  mconcat
+  [ header e,
+    printf "[%02d--%02d] " (fst edgeFromTo) (snd edgeFromTo),
+    printf "%6d   " actualLength,
+    printf "(%6d,%6d)    " (fst possibleLengthRange) (snd possibleLengthRange),
+    printf "%s        " (mark tolerant),
+    printf "%s" (mark included)]
+ where
+  mark True  = "✔"
+  mark False = "✘"
 
 {-# ANN isValidPose "HLint: ignore Use &&" #-}
 isValidPose :: P.Problem -> Pose -> Bool
