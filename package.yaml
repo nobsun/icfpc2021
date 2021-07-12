@@ -168,7 +168,20 @@ executables:
           - graphviz
         else:
           buildable: false
-    
+
+  solver-smt:
+    main:                solver-smt.hs
+    source-dirs:         app
+    dependencies:
+      - icfpc2021
+
+  z3help:
+    main:                z3help.hs
+    source-dirs:         app
+    other-modules:       []
+    dependencies:
+    - z3
+
 tests:
   icfpc2021-test:
     main:                spec.hs
