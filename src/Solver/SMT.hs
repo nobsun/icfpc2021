@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 module Solver.SMT
   ( solve
+  , solveFor, Session (..)
   , test
   ) where
 
