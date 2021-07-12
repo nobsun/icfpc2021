@@ -50,8 +50,9 @@ solve prob = do
       Z3.solverAssertCnstr =<< Z3.mkEq tx =<< Z3.mkAdd [sx, dx]
       Z3.solverAssertCnstr =<< Z3.mkEq ty =<< Z3.mkAdd [sy, dy]
 
-      let lim :: Integer
+      let lim :: Int
           lim = floor (sqrt (fromIntegral max_d + 0.001 :: Double))
+      -- liftIO $ print (i, min_d, max_d, lim)
       Z3.solverAssertCnstr =<< Z3.mkGe dx =<< Z3.mkIntNum (- lim)
       Z3.solverAssertCnstr =<< Z3.mkLe dx =<< Z3.mkIntNum lim
       Z3.solverAssertCnstr =<< Z3.mkGe dy =<< Z3.mkIntNum (- lim)
@@ -59,8 +60,8 @@ solve prob = do
 
       dx2 <- Z3.mkIntVar =<< Z3.mkStringSymbol ("e" ++ show i ++ "dx2")
       dy2 <- Z3.mkIntVar =<< Z3.mkStringSymbol ("e" ++ show i ++ "dy2")
-      Z3.solverAssertCnstr =<< Z3.mkLe zero dx2
-      Z3.solverAssertCnstr =<< Z3.mkLe zero dy2
+      assertIsSquare dx dx2 lim
+      assertIsSquare dy dy2 lim
       d <- Z3.mkAdd [dx2, dy2]
       min_d' <- Z3.mkIntNum min_d
       max_d' <- Z3.mkIntNum max_d
@@ -91,35 +92,35 @@ solve prob = do
               PoseInfo.reportPose info
               hFlush stdout
 
-            actions <- liftM concat $ forM (zip [(0::Int)..] es) $ \(i, _) -> do
+            actions <- liftM concat $ forM (zip [(0::Int)..] es) $ \(i, P.Edge s t) -> do
               let (dx', dy', dx2', dy2') = edgeVars V.! i
               Just dx <- Z3.evalInt model dx'
               Just dy <- Z3.evalInt model dy'
               Just dx2 <- Z3.evalInt model dx2'
               Just dy2 <- Z3.evalInt model dy2'
               return $ concat $
-                [ [ do -- liftIO $ hPrintf stderr "%d^2 = %d < %d\n" dx (dx*dx) dx2
+                [ [ do -- liftIO $ hPrintf stderr "[%d--%d x] %d^2 = %d < %d\n" s t dx (dx*dx) dx2
                        pre1 <- Z3.mkLe dx' =<< Z3.mkIntNum (abs dx)
                        pre2 <- Z3.mkGe dx' =<< Z3.mkIntNum (- abs dx)
                        pre <- Z3.mkAnd [pre1, pre2]
                        post <- Z3.mkLe dx2' =<< Z3.mkIntNum (dx * dx)
                        Z3.solverAssertCnstr =<< Z3.mkImplies pre post
                   | dx*dx < dx2 ]
-                , [ do -- liftIO $ hPrintf stderr "%d^2 = %d > %d\n" dx (dx*dx) dx2
+                , [ do -- liftIO $ hPrintf stderr "[%d--%d x] %d^2 = %d > %d\n" s t dx (dx*dx) dx2
                        pre1 <- Z3.mkGe dx' =<< Z3.mkIntNum (abs dx)
                        pre2 <- Z3.mkLe dx' =<< Z3.mkIntNum (- abs dx)
                        pre <- Z3.mkOr [pre1, pre2]
                        post <- Z3.mkGe dx2' =<< Z3.mkIntNum (dx * dx)
                        Z3.solverAssertCnstr =<< Z3.mkImplies pre post
                   | dx*dx > dx2 ]
-                , [ do -- liftIO $ hPrintf stderr "%d^2 = %d < %d\n" dy (dy*dy) dy2
+                , [ do -- liftIO $ hPrintf stderr "[%d--%d y] %d^2 = %d < %d\n" s t dy (dy*dy) dy2
                        pre1 <- Z3.mkLe dy' =<< Z3.mkIntNum (abs dy)
                        pre2 <- Z3.mkGe dy' =<< Z3.mkIntNum (- abs dy)
                        pre <- Z3.mkAnd [pre1, pre2]
                        post <- Z3.mkLe dy2' =<< Z3.mkIntNum (dy * dy)
                        Z3.solverAssertCnstr =<< Z3.mkImplies pre post
                   | dy*dy < dy2 ]
-                , [ do -- liftIO $ hPrintf stderr "%d^2 = %d > %d\n" dy (dy*dy) dy2
+                , [ do -- liftIO $ hPrintf stderr "[%d--%d y] %d^2 = %d > %d\n" s t dy (dy*dy) dy2
                        pre1 <- Z3.mkGe dy' =<< Z3.mkIntNum (abs dy)
                        pre2 <- Z3.mkLe dy' =<< Z3.mkIntNum (- abs dy)
                        pre <- Z3.mkOr [pre1, pre2]
@@ -170,6 +171,22 @@ solve prob = do
     P.Figure{ P.edges = es, P.vertices = vs' } = P.figure prob
     vs = V.fromList vs'
     eps = P.epsilon prob
+
+
+assertIsSquare :: Z3.AST -> Z3.AST -> Int -> Z3.Z3 ()
+assertIsSquare x x2 lim = do
+  zero <- Z3.mkIntNum (0 :: Int)
+  Z3.solverAssertCnstr =<< Z3.mkGe x2 zero
+  Z3.solverAssertCnstr =<< Z3.mkLe x2 =<< Z3.mkIntNum (lim*lim)
+  forM_ [0..lim] $ \n -> do
+    lb <- Z3.mkIntNum (- n)
+    ub <- Z3.mkIntNum n
+    pre1 <- Z3.mkAnd =<< sequence [Z3.mkLe lb x, Z3.mkLe x ub]
+    post1 <- Z3.mkLe x2 =<< Z3.mkIntNum (n*n)
+    Z3.solverAssertCnstr =<< Z3.mkImplies pre1 post1
+    pre2 <- Z3.mkOr =<< sequence [Z3.mkGe lb x, Z3.mkGe x ub]
+    post2 <- Z3.mkGe x2 =<< Z3.mkIntNum (n*n)
+    Z3.solverAssertCnstr =<< Z3.mkImplies pre2 post2
 
 
 assertIsInside :: (Z3.AST, Z3.AST) -> P.Hole -> Z3.Z3 ()
