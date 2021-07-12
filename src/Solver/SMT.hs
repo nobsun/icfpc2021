@@ -22,13 +22,20 @@ import qualified PoseInfo
 import qualified Hole
 
 
+setParam :: Z3.MonadZ3 m => m ()
+setParam = do
+  params <- Z3.mkParams
+  threads <- Z3.mkStringSymbol "threads"
+  Z3.paramsSetUInt params threads 8
+  Z3.solverSetParams params
+
 solve :: P.Problem -> IO P.Pose
 solve prob = do
   hPrintf stderr "#vertices = %d\n" (length vs)
   hPrintf stderr "#edges = %d\n" (length es)
 
   Z3.evalZ3 $ do
-    mkParam
+    setParam
     
     pointVars <- liftM V.fromList $ forM (zip [(0::Int)..] (V.toList vs)) $ \(i, _) -> do
       x <- Z3.mkIntVar =<< Z3.mkStringSymbol ("x" ++ show i)
@@ -316,13 +323,6 @@ data Session = Lightning | Main
 instance Show Session where
   show Lightning = "lightning-problems"
   show Main      = "problems"
-
-mkParam :: Z3.MonadZ3 m => m ()
-mkParam = do
-  params <- Z3.mkParams
-  threads <- Z3.mkStringSymbol "threads"
-  Z3.paramsSetUInt params threads 8
-  Z3.solverSetParams params
 
 solveFor :: Session -> Int -> IO ()
 solveFor sess i = do
