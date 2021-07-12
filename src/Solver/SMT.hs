@@ -28,8 +28,6 @@ solve prob = do
   hPrintf stderr "#edges = %d\n" (length es)
 
   Z3.evalZ3 $ do
-    zero <- Z3.mkIntNum (0 :: Int)
-
     pointVars <- liftM V.fromList $ forM (zip [(0::Int)..] (V.toList vs)) $ \(i, _) -> do
       x <- Z3.mkIntVar =<< Z3.mkStringSymbol ("x" ++ show i)
       y <- Z3.mkIntVar =<< Z3.mkStringSymbol ("y" ++ show i)
@@ -92,46 +90,16 @@ solve prob = do
               PoseInfo.reportPose info
               hFlush stdout
 
-            actions <- liftM concat $ forM (zip [(0::Int)..] es) $ \(i, P.Edge s t) -> do
+            constrs <- liftM concat $ forM (zip [(0::Int)..] es) $ \(i, _) -> do
               let (dx', dy', dx2', dy2') = edgeVars V.! i
-              Just dx <- Z3.evalInt model dx'
-              Just dy <- Z3.evalInt model dy'
-              Just dx2 <- Z3.evalInt model dx2'
-              Just dy2 <- Z3.evalInt model dy2'
-              return $ concat $
-                [ [ do -- liftIO $ hPrintf stderr "[%d--%d x] %d^2 = %d < %d\n" s t dx (dx*dx) dx2
-                       pre1 <- Z3.mkLe dx' =<< Z3.mkIntNum (abs dx)
-                       pre2 <- Z3.mkGe dx' =<< Z3.mkIntNum (- abs dx)
-                       pre <- Z3.mkAnd [pre1, pre2]
-                       post <- Z3.mkLe dx2' =<< Z3.mkIntNum (dx * dx)
-                       Z3.solverAssertCnstr =<< Z3.mkImplies pre post
-                  | dx*dx < dx2 ]
-                , [ do -- liftIO $ hPrintf stderr "[%d--%d x] %d^2 = %d > %d\n" s t dx (dx*dx) dx2
-                       pre1 <- Z3.mkGe dx' =<< Z3.mkIntNum (abs dx)
-                       pre2 <- Z3.mkLe dx' =<< Z3.mkIntNum (- abs dx)
-                       pre <- Z3.mkOr [pre1, pre2]
-                       post <- Z3.mkGe dx2' =<< Z3.mkIntNum (dx * dx)
-                       Z3.solverAssertCnstr =<< Z3.mkImplies pre post
-                  | dx*dx > dx2 ]
-                , [ do -- liftIO $ hPrintf stderr "[%d--%d y] %d^2 = %d < %d\n" s t dy (dy*dy) dy2
-                       pre1 <- Z3.mkLe dy' =<< Z3.mkIntNum (abs dy)
-                       pre2 <- Z3.mkGe dy' =<< Z3.mkIntNum (- abs dy)
-                       pre <- Z3.mkAnd [pre1, pre2]
-                       post <- Z3.mkLe dy2' =<< Z3.mkIntNum (dy * dy)
-                       Z3.solverAssertCnstr =<< Z3.mkImplies pre post
-                  | dy*dy < dy2 ]
-                , [ do -- liftIO $ hPrintf stderr "[%d--%d y] %d^2 = %d > %d\n" s t dy (dy*dy) dy2
-                       pre1 <- Z3.mkGe dy' =<< Z3.mkIntNum (abs dy)
-                       pre2 <- Z3.mkLe dy' =<< Z3.mkIntNum (- abs dy)
-                       pre <- Z3.mkOr [pre1, pre2]
-                       post <- Z3.mkGe dy2' =<< Z3.mkIntNum (dy * dy)
-                       Z3.solverAssertCnstr =<< Z3.mkImplies pre post
-                  | dy*dy > dy2 ]
+              liftM catMaybes $ sequence
+                [ encodeIsSquareBlocking model dx' dx2'
+                , encodeIsSquareBlocking model dy' dy2'
                 ]
 
-            case actions of
+            case constrs of
               (_ : _) -> do
-                sequence_ actions
+                mapM_ Z3.solverAssertCnstr constrs
                 loop (k+1)
               [] -> do
                 actions2 <- liftM concat $ forM es $ \(P.Edge s t) -> do
@@ -145,14 +113,11 @@ solve prob = do
                     Just (r, p) -> do
                       let (x1', y1') = pointVars V.! s
                           (x2', y2') = pointVars V.! t
-                      r' <- Z3.mkRational r
-                      r2' <- Z3.mkSub =<< sequence [Z3.mkRational 1, pure r']
                       x1'' <- Z3.mkInt2Real x1'
                       y1'' <- Z3.mkInt2Real y1'
                       x2'' <- Z3.mkInt2Real x2'
                       y2'' <- Z3.mkInt2Real y2'
-                      x'' <- Z3.mkAdd =<< sequence [Z3.mkMul [r', x1''], Z3.mkMul [r2', x2'']]
-                      y'' <- Z3.mkAdd =<< sequence [Z3.mkMul [r', y1''], Z3.mkMul [r2', y2'']]
+                      (x'', y'') <- mix' r (x1'', y1'') (x2'', y2'')
                       return [liftIO (print (P.Edge s t, p1, p2, p, r)) >> assertIsInside (x'', y'') hole]
 
                 case actions2 of
@@ -189,6 +154,29 @@ assertIsSquare x x2 lim = do
     Z3.solverAssertCnstr =<< Z3.mkImplies pre2 post2
 
 
+-- x2 が x の二乗でない場合に、その反例をブロックする制約条件を返す
+encodeIsSquareBlocking :: Z3.Model -> Z3.AST -> Z3.AST -> Z3.Z3 (Maybe Z3.AST)
+encodeIsSquareBlocking model x x2 = do
+  Just v <- Z3.evalInt model x
+  Just v2 <- Z3.evalInt model x2
+  case compare (v*v) v2 of
+    EQ -> return Nothing
+    LT -> do
+      liftIO $ putStrLn "A"
+      pre1 <- Z3.mkLe x =<< Z3.mkIntNum (abs v)
+      pre2 <- Z3.mkGe x =<< Z3.mkIntNum (- abs v)
+      pre <- Z3.mkAnd [pre1, pre2]
+      post <- Z3.mkLe x2 =<< Z3.mkIntNum (v * v)
+      liftM Just $ Z3.mkImplies pre post
+    GT -> do
+      liftIO $ putStrLn "B"
+      pre1 <- Z3.mkGe x =<< Z3.mkIntNum (abs v)
+      pre2 <- Z3.mkLe x =<< Z3.mkIntNum (- abs v)
+      pre <- Z3.mkOr [pre1, pre2]
+      post <- Z3.mkGe x2 =<< Z3.mkIntNum (v * v)
+      liftM Just $ Z3.mkImplies pre post
+
+
 assertIsInside :: (Z3.AST, Z3.AST) -> P.Hole -> Z3.Z3 ()
 assertIsInside (x', y') hole = do
   zero <- Z3.mkIntNum (0 :: Int)
@@ -216,7 +204,6 @@ assertIsInside (x', y') hole = do
   cpTerms <- forM (zip hole (tail hole ++ [head hole])) $ \(P.Point x1 y1, P.Point x2 y2) -> do
     x1' <- Z3.mkIntNum x1
     y1' <- Z3.mkIntNum y1
-    x2' <- Z3.mkIntNum x2
     y2' <- Z3.mkIntNum y2
     cond <-
       if y1 == y2 then
@@ -243,6 +230,15 @@ distance (P.Point x1 y1) (P.Point x2 y2) = (x2 - x1)^(2::Int) + (y2 - y1)^(2::In
 
 mix :: Integral a => Rational -> (a,a) -> (a,a) -> (Rational, Rational)
 mix r (x1,y1) (x2,y2) = (r * fromIntegral x1 + (1 - r) * fromIntegral x2, r * fromIntegral y1 + (1 - r) * fromIntegral y2)
+
+
+mix' :: Rational -> (Z3.AST, Z3.AST) -> (Z3.AST, Z3.AST) -> Z3.Z3 (Z3.AST, Z3.AST)
+mix' r (x1,y1) (x2,y2) = do
+  r' <- Z3.mkRational r
+  s' <- Z3.mkRational (1 - r)
+  x <- Z3.mkAdd =<< sequence [Z3.mkMul [r', x1], Z3.mkMul [s', x2]]
+  y <- Z3.mkAdd =<< sequence [Z3.mkMul [r', y1], Z3.mkMul [s', y2]]
+  return (x,y)
 
 
 -- http://www5d.biglobe.ne.jp/~tomoya03/shtml/algorithm/Intersection.htm
