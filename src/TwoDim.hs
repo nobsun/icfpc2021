@@ -1,4 +1,6 @@
 module TwoDim (
+  Vec,
+
   (|+|), (|-|),
   negateV,
   normalV,
@@ -14,7 +16,7 @@ module TwoDim (
   line,
   ) where
 
-type Vec a = (a, a)
+import Types (Vec)
 
 {- | 加算
 >>> (0,0) |+| (1,2)

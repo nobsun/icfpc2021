@@ -3,7 +3,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# OPTIONS -Wno-orphans #-}
 {-# OPTIONS -Wno-name-shadowing #-}
+-- module to parse JSONs
 module Parser
     ( Point (..)
     , Index
@@ -27,6 +30,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 -- import System.FilePath (FilePath)
 
+import Types (BonusType (..))
 import AesonArrayGeneric
   (genericParseArrayJSON, defaultAesonArrayOptions, genericToArrayJSON)
 
@@ -62,12 +66,7 @@ instance ToJSON Point where
   toJSON = genericToArrayJSON
   -- toJSON (Point x y) = toJSON [x, y]
 
-data BonusType
-  = GLOBALIST
-  | BREAK_A_LEG
-  | WALLHACK
-  | SUPERFLEX
-  deriving (Show, Eq, Generic)
+deriving instance Generic BonusType
 
 {- |
 >>> decode "\"BREAK_A_LEG\"" :: Maybe BonusType
