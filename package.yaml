@@ -120,6 +120,18 @@ executables:
       - condition: flag(static)
         ghc-options: -static
 
+  check:
+    main:                check.hs
+    source-dirs:         app-check
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    dependencies:
+    - icfpc2021
+    - optparse-applicative
+    - mtl
+    - text
+
   submit:
     main:                submit.hs
     source-dirs:         app-submit

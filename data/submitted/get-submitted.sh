@@ -6,7 +6,7 @@
 wget --keep-session-cookies --save-cookies=cookies.txt --post-data='login.email=team-sampou@googlegroups.com&login.password=sampou2021' https://poses.live/login
 
 # down load pages
-for i in $(seq 1 106)
+for i in $(seq 1 132)
 do
     echo DOWNLOADING... ${i}.html
     

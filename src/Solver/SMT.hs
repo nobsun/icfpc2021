@@ -28,8 +28,6 @@ solve prob = do
   hPrintf stderr "#edges = %d\n" (length es)
 
   Z3.evalZ3 $ do
-    zero <- Z3.mkIntNum (0 :: Int)
-
     pointVars <- liftM V.fromList $ forM (zip [(0::Int)..] (V.toList vs)) $ \(i, _) -> do
       x <- Z3.mkIntVar =<< Z3.mkStringSymbol ("x" ++ show i)
       y <- Z3.mkIntVar =<< Z3.mkStringSymbol ("y" ++ show i)
@@ -50,8 +48,9 @@ solve prob = do
       Z3.solverAssertCnstr =<< Z3.mkEq tx =<< Z3.mkAdd [sx, dx]
       Z3.solverAssertCnstr =<< Z3.mkEq ty =<< Z3.mkAdd [sy, dy]
 
-      let lim :: Integer
+      let lim :: Int
           lim = floor (sqrt (fromIntegral max_d + 0.001 :: Double))
+      -- liftIO $ print (i, min_d, max_d, lim)
       Z3.solverAssertCnstr =<< Z3.mkGe dx =<< Z3.mkIntNum (- lim)
       Z3.solverAssertCnstr =<< Z3.mkLe dx =<< Z3.mkIntNum lim
       Z3.solverAssertCnstr =<< Z3.mkGe dy =<< Z3.mkIntNum (- lim)
@@ -59,8 +58,8 @@ solve prob = do
 
       dx2 <- Z3.mkIntVar =<< Z3.mkStringSymbol ("e" ++ show i ++ "dx2")
       dy2 <- Z3.mkIntVar =<< Z3.mkStringSymbol ("e" ++ show i ++ "dy2")
-      Z3.solverAssertCnstr =<< Z3.mkLe zero dx2
-      Z3.solverAssertCnstr =<< Z3.mkLe zero dy2
+      assertIsSquare dx dx2 lim
+      assertIsSquare dy dy2 lim
       d <- Z3.mkAdd [dx2, dy2]
       min_d' <- Z3.mkIntNum min_d
       max_d' <- Z3.mkIntNum max_d
@@ -88,49 +87,19 @@ solve prob = do
             liftIO $ do
               hFlush stderr
               BL.putStrLn $ JSON.encode pose
-              PoseInfo.reportPose info
+              PoseInfo.reportPoseInfo info
               hFlush stdout
 
-            actions <- liftM concat $ forM (zip [(0::Int)..] es) $ \(i, _) -> do
+            constrs <- liftM concat $ forM (zip [(0::Int)..] es) $ \(i, _) -> do
               let (dx', dy', dx2', dy2') = edgeVars V.! i
-              Just dx <- Z3.evalInt model dx'
-              Just dy <- Z3.evalInt model dy'
-              Just dx2 <- Z3.evalInt model dx2'
-              Just dy2 <- Z3.evalInt model dy2'
-              return $ concat $
-                [ [ do -- liftIO $ hPrintf stderr "%d^2 = %d < %d\n" dx (dx*dx) dx2
-                       pre1 <- Z3.mkLe dx' =<< Z3.mkIntNum (abs dx)
-                       pre2 <- Z3.mkGe dx' =<< Z3.mkIntNum (- abs dx)
-                       pre <- Z3.mkAnd [pre1, pre2]
-                       post <- Z3.mkLe dx2' =<< Z3.mkIntNum (dx * dx)
-                       Z3.solverAssertCnstr =<< Z3.mkImplies pre post
-                  | dx*dx < dx2 ]
-                , [ do -- liftIO $ hPrintf stderr "%d^2 = %d > %d\n" dx (dx*dx) dx2
-                       pre1 <- Z3.mkGe dx' =<< Z3.mkIntNum (abs dx)
-                       pre2 <- Z3.mkLe dx' =<< Z3.mkIntNum (- abs dx)
-                       pre <- Z3.mkOr [pre1, pre2]
-                       post <- Z3.mkGe dx2' =<< Z3.mkIntNum (dx * dx)
-                       Z3.solverAssertCnstr =<< Z3.mkImplies pre post
-                  | dx*dx > dx2 ]
-                , [ do -- liftIO $ hPrintf stderr "%d^2 = %d < %d\n" dy (dy*dy) dy2
-                       pre1 <- Z3.mkLe dy' =<< Z3.mkIntNum (abs dy)
-                       pre2 <- Z3.mkGe dy' =<< Z3.mkIntNum (- abs dy)
-                       pre <- Z3.mkAnd [pre1, pre2]
-                       post <- Z3.mkLe dy2' =<< Z3.mkIntNum (dy * dy)
-                       Z3.solverAssertCnstr =<< Z3.mkImplies pre post
-                  | dy*dy < dy2 ]
-                , [ do -- liftIO $ hPrintf stderr "%d^2 = %d > %d\n" dy (dy*dy) dy2
-                       pre1 <- Z3.mkGe dy' =<< Z3.mkIntNum (abs dy)
-                       pre2 <- Z3.mkLe dy' =<< Z3.mkIntNum (- abs dy)
-                       pre <- Z3.mkOr [pre1, pre2]
-                       post <- Z3.mkGe dy2' =<< Z3.mkIntNum (dy * dy)
-                       Z3.solverAssertCnstr =<< Z3.mkImplies pre post
-                  | dy*dy > dy2 ]
+              liftM catMaybes $ sequence
+                [ encodeIsSquareBlocking model dx' dx2'
+                , encodeIsSquareBlocking model dy' dy2'
                 ]
 
-            case actions of
+            case constrs of
               (_ : _) -> do
-                sequence_ actions
+                mapM_ Z3.solverAssertCnstr constrs
                 loop (k+1)
               [] -> do
                 actions2 <- liftM concat $ forM es $ \(P.Edge s t) -> do
@@ -144,14 +113,11 @@ solve prob = do
                     Just (r, p) -> do
                       let (x1', y1') = pointVars V.! s
                           (x2', y2') = pointVars V.! t
-                      r' <- Z3.mkRational r
-                      r2' <- Z3.mkSub =<< sequence [Z3.mkRational 1, pure r']
                       x1'' <- Z3.mkInt2Real x1'
                       y1'' <- Z3.mkInt2Real y1'
                       x2'' <- Z3.mkInt2Real x2'
                       y2'' <- Z3.mkInt2Real y2'
-                      x'' <- Z3.mkAdd =<< sequence [Z3.mkMul [r', x1''], Z3.mkMul [r2', x2'']]
-                      y'' <- Z3.mkAdd =<< sequence [Z3.mkMul [r', y1''], Z3.mkMul [r2', y2'']]
+                      (x'', y'') <- mix' r (x1'', y1'') (x2'', y2'')
                       return [liftIO (print (P.Edge s t, p1, p2, p, r)) >> assertIsInside (x'', y'') hole]
 
                 case actions2 of
@@ -172,12 +138,47 @@ solve prob = do
     eps = P.epsilon prob
 
 
+assertIsSquare :: Z3.AST -> Z3.AST -> Int -> Z3.Z3 ()
+assertIsSquare x x2 lim = do
+  zero <- Z3.mkIntNum (0 :: Int)
+  Z3.solverAssertCnstr =<< Z3.mkGe x2 zero
+  Z3.solverAssertCnstr =<< Z3.mkLe x2 =<< Z3.mkIntNum (lim*lim)
+  forM_ [0..lim] $ \n -> do
+    lb <- Z3.mkIntNum (- n)
+    ub <- Z3.mkIntNum n
+    pre1 <- Z3.mkAnd =<< sequence [Z3.mkLe lb x, Z3.mkLe x ub]
+    post1 <- Z3.mkLe x2 =<< Z3.mkIntNum (n*n)
+    Z3.solverAssertCnstr =<< Z3.mkImplies pre1 post1
+    pre2 <- Z3.mkOr =<< sequence [Z3.mkGe lb x, Z3.mkGe x ub]
+    post2 <- Z3.mkGe x2 =<< Z3.mkIntNum (n*n)
+    Z3.solverAssertCnstr =<< Z3.mkImplies pre2 post2
+
+
+-- x2 が x の二乗でない場合に、その反例をブロックする制約条件を返す
+encodeIsSquareBlocking :: Z3.Model -> Z3.AST -> Z3.AST -> Z3.Z3 (Maybe Z3.AST)
+encodeIsSquareBlocking model x x2 = do
+  Just v <- Z3.evalInt model x
+  Just v2 <- Z3.evalInt model x2
+  case compare (v*v) v2 of
+    EQ -> return Nothing
+    LT -> do
+      liftIO $ putStrLn "A"
+      pre1 <- Z3.mkLe x =<< Z3.mkIntNum (abs v)
+      pre2 <- Z3.mkGe x =<< Z3.mkIntNum (- abs v)
+      pre <- Z3.mkAnd [pre1, pre2]
+      post <- Z3.mkLe x2 =<< Z3.mkIntNum (v * v)
+      liftM Just $ Z3.mkImplies pre post
+    GT -> do
+      liftIO $ putStrLn "B"
+      pre1 <- Z3.mkGe x =<< Z3.mkIntNum (abs v)
+      pre2 <- Z3.mkLe x =<< Z3.mkIntNum (- abs v)
+      pre <- Z3.mkOr [pre1, pre2]
+      post <- Z3.mkGe x2 =<< Z3.mkIntNum (v * v)
+      liftM Just $ Z3.mkImplies pre post
+
+
 assertIsInside :: (Z3.AST, Z3.AST) -> P.Hole -> Z3.Z3 ()
 assertIsInside (x', y') hole = do
-  zero <- Z3.mkIntNum (0 :: Int)
-  one <- Z3.mkIntNum (1 :: Int)
-  two <- Z3.mkIntNum (2 :: Int)
-
   isOn <- forM (zip hole (tail hole ++ [head hole])) $ \(P.Point x1 y1, P.Point x2 y2) -> do
     x1' <- Z3.mkIntNum x1
     y1' <- Z3.mkIntNum y1
@@ -196,27 +197,34 @@ assertIsInside (x', y') hole = do
     cond <- Z3.mkAnd [cond1, cond2]
     return cond
 
-  cpTerms <- forM (zip hole (tail hole ++ [head hole])) $ \(P.Point x1 y1, P.Point x2 y2) -> do
+  cps <- liftM catMaybes $ forM (zip hole (tail hole ++ [head hole])) $ \(P.Point x1 y1, P.Point x2 y2) -> do
     x1' <- Z3.mkIntNum x1
     y1' <- Z3.mkIntNum y1
-    x2' <- Z3.mkIntNum x2
     y2' <- Z3.mkIntNum y2
-    cond <-
-      if y1 == y2 then
-        Z3.mkFalse
-      else do
-        cond1 <-
-          if y1 < y2 then
-            Z3.mkAnd =<< sequence [Z3.mkLe y1' y', Z3.mkLt y' y2']
-          else
-            Z3.mkAnd =<< sequence [Z3.mkLe y2' y', Z3.mkLt y' y1']
-        rhs <- Z3.mkAdd =<< sequence [pure x1', Z3.mkMul =<< sequence [Z3.mkSub [y', y1'], Z3.mkRational (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))]]
-        cond2 <- Z3.mkLt x' rhs
-        Z3.mkAnd [cond1, cond2]
-    Z3.mkIte cond one zero
+    if y1 == y2 then
+      return Nothing
+    else do
+      cond1 <-
+        if y1 < y2 then
+          Z3.mkAnd =<< sequence [Z3.mkLe y1' y', Z3.mkLt y' y2']
+        else
+          Z3.mkAnd =<< sequence [Z3.mkLe y2' y', Z3.mkLt y' y1']
+      rhs <- Z3.mkAdd =<< sequence [pure x1', Z3.mkMul =<< sequence [Z3.mkSub [y', y1'], Z3.mkRational (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))]]
+      cond2 <- Z3.mkLt x' rhs
+      liftM Just $ Z3.mkAnd [cond1, cond2]
 
-  cp <- Z3.mkAdd cpTerms
-  condCP <- Z3.mkEq one =<< Z3.mkMod cp two
+  condCP <-
+    -- 和が奇数であることよりも、xorを使った方が効率が良い?
+    if False then do
+      zero <- Z3.mkIntNum (0 :: Int)
+      one <- Z3.mkIntNum (1 :: Int)
+      two <- Z3.mkIntNum (2 :: Int)
+      cp <- Z3.mkAdd =<< sequence [Z3.mkIte cond one zero | cond <- cps]
+      Z3.mkEq one =<< Z3.mkMod cp two
+    else do
+      false <- Z3.mkFalse
+      foldM Z3.mkXor false cps
+
   Z3.solverAssertCnstr =<< Z3.mkOr (isOn ++ [condCP])
 
 
@@ -226,6 +234,15 @@ distance (P.Point x1 y1) (P.Point x2 y2) = (x2 - x1)^(2::Int) + (y2 - y1)^(2::In
 
 mix :: Integral a => Rational -> (a,a) -> (a,a) -> (Rational, Rational)
 mix r (x1,y1) (x2,y2) = (r * fromIntegral x1 + (1 - r) * fromIntegral x2, r * fromIntegral y1 + (1 - r) * fromIntegral y2)
+
+
+mix' :: Rational -> (Z3.AST, Z3.AST) -> (Z3.AST, Z3.AST) -> Z3.Z3 (Z3.AST, Z3.AST)
+mix' r (x1,y1) (x2,y2) = do
+  r' <- Z3.mkRational r
+  s' <- Z3.mkRational (1 - r)
+  x <- Z3.mkAdd =<< sequence [Z3.mkMul [r', x1], Z3.mkMul [s', x2]]
+  y <- Z3.mkAdd =<< sequence [Z3.mkMul [r', y1], Z3.mkMul [s', y2]]
+  return (x,y)
 
 
 -- http://www5d.biglobe.ne.jp/~tomoya03/shtml/algorithm/Intersection.htm
@@ -293,33 +310,38 @@ isCrossing (x, y) (P.Point x1 y1, P.Point x2 y2) =
     y1' = fromIntegral y1
     y2' = fromIntegral y2
 
+data Session = Lightning | Main
+instance Show Session where
+  show Lightning = "lightning-problems"
+  show Main      = "problems"
+
+solveFor :: Session -> Int -> IO ()
+solveFor sess i = do
+  hPutStrLn stderr "==================================="
+  let fname = printf "data/%s/%03d.json" (show sess) i
+  hPutStrLn stderr fname
+
+  Just prob <- P.readProblem fname
+  let P.Figure{ P.edges = es, P.vertices = vs' } = P.figure prob
+      vs = V.fromList vs'
+      eps = P.epsilon prob
+
+  pose@P.Pose{ P.pose'vertices = ps } <- solve prob
+  JSON.encodeFile (printf "sol%03d.json" i) pose
+
+  let hole = P.hole prob
+  forM_ ps $ \p -> do
+    unless (Hole.isInsideHole p hole) $ do
+      hPrintf stderr "%d is not inside hole\n" (show p)
+
+  forM_ es $ \e@(P.Edge s t) -> do
+    let orig_d = distance (vs V.! s) (vs V.! t)
+    let min_d = orig_d + ceiling (- fromIntegral orig_d * fromIntegral eps / 1000000 :: Rational)
+    let max_d = orig_d + floor (fromIntegral orig_d * fromIntegral eps / 1000000 :: Rational)
+    let d = distance (ps !! s) (ps !! t)
+    unless (min_d <= d && d <= max_d) $ do
+      hPrintf stderr "(%s) (length %d) is mapped to (%s, %s) (length %d)\n" (show e) orig_d (show (ps !! s)) (show (ps !! t)) d
+      hPrintf stderr "But %d is not in [%d, %d]\n" d min_d max_d
 
 test :: IO ()
-test = do
-  forM_ [(1::Int)..59] $ \i -> do
-  -- forM_ [(8::Int), 28, 29, 32] $ \i -> do
-    hPutStrLn stderr "==================================="
-    let fname = printf "data/lightning-problems/%03d.json" i
-    hPutStrLn stderr fname
-
-    Just prob <- P.readProblem fname
-    let P.Figure{ P.edges = es, P.vertices = vs' } = P.figure prob
-        vs = V.fromList vs'
-        eps = P.epsilon prob
-
-    pose@P.Pose{ P.pose'vertices = ps } <- solve prob
-    JSON.encodeFile (printf "sol%03d.json" i) pose
-
-    let hole = P.hole prob
-    forM_ ps $ \p -> do
-      unless (Hole.isInsideHole p hole) $ do
-        hPrintf stderr "%d is not inside hole\n" (show p)
-
-    forM_ es $ \e@(P.Edge s t) -> do
-       let orig_d = distance (vs V.! s) (vs V.! t)
-       let min_d = orig_d + ceiling (- fromIntegral orig_d * fromIntegral eps / 1000000 :: Rational)
-       let max_d = orig_d + floor (fromIntegral orig_d * fromIntegral eps / 1000000 :: Rational)
-       let d = distance (ps !! s) (ps !! t)
-       unless (min_d <= d && d <= max_d) $ do
-         hPrintf stderr "(%s) (length %d) is mapped to (%s, %s) (length %d)\n" (show e) orig_d (show (ps !! s)) (show (ps !! t)) d
-         hPrintf stderr "But %d is not in [%d, %d]\n" d min_d max_d
+test = forM_ [(1::Int)..59] (solveFor Lightning)

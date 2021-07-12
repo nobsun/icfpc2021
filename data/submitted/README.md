@@ -16,7 +16,7 @@ export ICFP2021_API_TOKEN=<<team-token>>
 TODO: wget のオプションでもっとスマートに対応できそう。
 
 ```
-$ seq 1 106 | xargs rm -rf
+$ seq 1 132 | xargs rm -rf
 ```
 
 # 実行
@@ -30,7 +30,7 @@ $ ./get-submitted.sh
 # git へ追加登録
 
 ```
-$ seq 1 106 | xargs git add
+$ seq 1 132 | xargs git add
 ```
 
 ステージングしたら git commit して push すればおしまい。
