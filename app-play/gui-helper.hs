@@ -583,17 +583,14 @@ envHole Env { envProblem = P.Problem {..} } = hole
 draw :: Demo ()
 draw = do
   -- [CLI]
-  PoseInfo { poseEdgeInfo, poseDislikes, poseIsValid } <- gets statePose
+  poseInfo <- gets statePose
   mEdgeId <- gets stateSelectedEdgeId
-  liftIO $ putStrLn "    edge     length   possible_range  tolerant included"
-  forM_ poseEdgeInfo $ \e -> do
-    let h | Just (edgeId e) == mEdgeId = "[*] "
-          | otherwise                  = "[ ] "
-    liftIO $ do
-      putStr h
-      PoseInfo.reportEdgeInfo e
-  liftIO $ putStrLn $ "validPose: " <> show poseIsValid
-  liftIO $ putStrLn $ "dislikes:  " <> show poseDislikes
+  liftIO $ PoseInfo.reportPoseInfo_
+    ( "    ",
+      \case e | Just (edgeId e) == mEdgeId -> "[*] "
+              | otherwise                  -> "[ ] " )
+    poseInfo
+
   -- [CLI END]
   env <- ask
   let hole = envHole env
@@ -691,4 +688,3 @@ updateStatePoseInfo poseInfo = do
                    , stateUndoQueue = newUndoQueue'
                    , stateRedoQueue = []
                    }
-

@@ -5,18 +5,11 @@
 module Main where
 
 import           Control.Monad
-import qualified Data.ByteString               as B
-import qualified Data.ByteString.Char8         as BC
-import           Data.Functor                   ( (<&>) )
 import qualified Data.Aeson                    as JSON
-import           Data.String                    ( fromString )
-import qualified Data.Text                     as T
 import           Options.Applicative
-import           System.Environment             ( lookupEnv )
 import           System.Exit                    ( exitFailure )
 import           Text.Printf
 
-import qualified Parser                        as P
 import qualified PoseInfo
 
 
@@ -50,13 +43,12 @@ main = do
   Options {..} <- execParser parserInfo
   Just prob <- JSON.decodeFileStrict' (printf "data/problems/%03d.json" problemNumber)
   Just pose <- JSON.decodeFileStrict' solutionFile
-  let info = PoseInfo.verifyPose prob pose
-  PoseInfo.reportPose info
-  unless (PoseInfo.poseIsValid info) $ do
+  let poseInfo = PoseInfo.verifyPose prob pose
+  PoseInfo.reportPoseInfo poseInfo
+  unless (PoseInfo.poseIsValid poseInfo) $ do
     exitFailure
 
 printUsageAndExit :: IO ()
 printUsageAndExit = do
   putStrLn "Usage: submit --problem NUM --solution FILE"
   exitFailure
-

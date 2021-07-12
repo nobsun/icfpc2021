@@ -68,11 +68,9 @@ verifyPose Problem { hole, figure, epsilon } pose@(Pose _bonus poseVertices) =
           where valid PoseEdgeInfo{..} = tolerant && included
       in PoseInfo {..}
 
+{-# DEPRECATED reportPose "use reportPoseInfo" #-}
 reportPose :: PoseInfo -> IO ()
-reportPose PoseInfo{poseEdgeInfo, poseDislikes} = do
-  putStrLn $ "dislikes: " <> show poseDislikes
-  putStrLn "edge     length   possible_range  tolerant included"
-  mapM_ reportEdgeInfo poseEdgeInfo
+reportPose = reportPoseInfo
 
 reportPoseInfo :: PoseInfo -> IO ()
 reportPoseInfo = reportPoseInfo_ ("", const "")
@@ -87,18 +85,6 @@ pprPoseInfo (header, edgeHeader) PoseInfo{poseEdgeInfo, poseDislikes, poseIsVali
   map (pprEdgeInfo edgeHeader) poseEdgeInfo ++
   [ "validPose: " <> show poseIsValid,
     "dislikes: " <> show poseDislikes ]
-
-reportEdgeInfo :: PoseEdgeInfo -> IO ()
-reportEdgeInfo PoseEdgeInfo{..} = do
-    putStr $ printf "[%02d--%02d] " (fst edgeFromTo) (snd edgeFromTo)
-    putStr $ printf "%6d   " actualLength
-    putStr $ printf "(%6d,%6d)    " (fst possibleLengthRange) (snd possibleLengthRange)
-    putStr $ printf "%s        " (mark tolerant)
-    putStr $ printf "%s" (mark included)
-    putStrLn ""
- where
-  mark True  = "✔"
-  mark False = "✘"
 
 pprEdgeInfo :: (PoseEdgeInfo -> String) -> PoseEdgeInfo -> String
 pprEdgeInfo header e@PoseEdgeInfo{..} =
