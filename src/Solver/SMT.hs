@@ -26,7 +26,7 @@ setParam :: Z3.MonadZ3 m => m ()
 setParam = do
   params <- Z3.mkParams
   threads <- Z3.mkStringSymbol "threads"
-  Z3.paramsSetUInt params threads 8
+  Z3.paramsSetUInt params threads 12
   Z3.solverSetParams params
 
 solve :: P.Problem -> IO P.Pose
