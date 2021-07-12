@@ -182,9 +182,6 @@ executable play-gui
 
 executable solver-smt
   main-is: solver-smt.hs
-  other-modules:
-      Main
-      Paths_icfpc2021
   hs-source-dirs:
       app
   build-depends:

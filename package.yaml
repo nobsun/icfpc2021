@@ -172,6 +172,7 @@ executables:
   solver-smt:
     main:                solver-smt.hs
     source-dirs:         app
+    other-modules:       []
     dependencies:
       - icfpc2021
 

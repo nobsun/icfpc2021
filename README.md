@@ -19,4 +19,11 @@ Our approach includes:
   * If the hole is not convex, we may get a solution where the edge goes outside the hole in the middle.
     In such a case, we add a constraint on demand like CEGAR, that the hole contains a point that divides the edge in an appropriate ratio.
 
+## Members
 
+* [Katsutoshi Itoh](https://github.com/cutsea110)
+* [Naoki Iwayama](https://github.com/Hogeyama)
+* [Kei Hibino](https://github.com/khibino)
+* [Yasuyuki Ogawa](https://github.com/oganet)
+* [Masahiro Sakai](https://github.com/msakai)
+* [Nobuo Yamashita](https://github.com/nobsun)
