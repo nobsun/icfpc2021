@@ -44,7 +44,7 @@ main = do
   Just prob <- JSON.decodeFileStrict' (printf "data/problems/%03d.json" problemNumber)
   Just pose <- JSON.decodeFileStrict' solutionFile
   let poseInfo = PoseInfo.verifyPose prob pose
-  PoseInfo.reportPose poseInfo
+  PoseInfo.reportPoseInfo poseInfo
   unless (PoseInfo.poseIsValid poseInfo) $ do
     exitFailure
 
@@ -52,4 +52,3 @@ printUsageAndExit :: IO ()
 printUsageAndExit = do
   putStrLn "Usage: submit --problem NUM --solution FILE"
   exitFailure
-
