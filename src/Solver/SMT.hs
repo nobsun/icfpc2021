@@ -179,10 +179,6 @@ encodeIsSquareBlocking model x x2 = do
 
 assertIsInside :: (Z3.AST, Z3.AST) -> P.Hole -> Z3.Z3 ()
 assertIsInside (x', y') hole = do
-  zero <- Z3.mkIntNum (0 :: Int)
-  one <- Z3.mkIntNum (1 :: Int)
-  two <- Z3.mkIntNum (2 :: Int)
-
   isOn <- forM (zip hole (tail hole ++ [head hole])) $ \(P.Point x1 y1, P.Point x2 y2) -> do
     x1' <- Z3.mkIntNum x1
     y1' <- Z3.mkIntNum y1
@@ -201,26 +197,34 @@ assertIsInside (x', y') hole = do
     cond <- Z3.mkAnd [cond1, cond2]
     return cond
 
-  cpTerms <- forM (zip hole (tail hole ++ [head hole])) $ \(P.Point x1 y1, P.Point x2 y2) -> do
+  cps <- liftM catMaybes $ forM (zip hole (tail hole ++ [head hole])) $ \(P.Point x1 y1, P.Point x2 y2) -> do
     x1' <- Z3.mkIntNum x1
     y1' <- Z3.mkIntNum y1
     y2' <- Z3.mkIntNum y2
-    cond <-
-      if y1 == y2 then
-        Z3.mkFalse
-      else do
-        cond1 <-
-          if y1 < y2 then
-            Z3.mkAnd =<< sequence [Z3.mkLe y1' y', Z3.mkLt y' y2']
-          else
-            Z3.mkAnd =<< sequence [Z3.mkLe y2' y', Z3.mkLt y' y1']
-        rhs <- Z3.mkAdd =<< sequence [pure x1', Z3.mkMul =<< sequence [Z3.mkSub [y', y1'], Z3.mkRational (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))]]
-        cond2 <- Z3.mkLt x' rhs
-        Z3.mkAnd [cond1, cond2]
-    Z3.mkIte cond one zero
+    if y1 == y2 then
+      return Nothing
+    else do
+      cond1 <-
+        if y1 < y2 then
+          Z3.mkAnd =<< sequence [Z3.mkLe y1' y', Z3.mkLt y' y2']
+        else
+          Z3.mkAnd =<< sequence [Z3.mkLe y2' y', Z3.mkLt y' y1']
+      rhs <- Z3.mkAdd =<< sequence [pure x1', Z3.mkMul =<< sequence [Z3.mkSub [y', y1'], Z3.mkRational (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))]]
+      cond2 <- Z3.mkLt x' rhs
+      liftM Just $ Z3.mkAnd [cond1, cond2]
 
-  cp <- Z3.mkAdd cpTerms
-  condCP <- Z3.mkEq one =<< Z3.mkMod cp two
+  condCP <-
+    -- 和が奇数であることよりも、xorを使った方が効率が良い?
+    if False then do
+      zero <- Z3.mkIntNum (0 :: Int)
+      one <- Z3.mkIntNum (1 :: Int)
+      two <- Z3.mkIntNum (2 :: Int)
+      cp <- Z3.mkAdd =<< sequence [Z3.mkIte cond one zero | cond <- cps]
+      Z3.mkEq one =<< Z3.mkMod cp two
+    else do
+      false <- Z3.mkFalse
+      foldM Z3.mkXor false cps
+
   Z3.solverAssertCnstr =<< Z3.mkOr (isOn ++ [condCP])
 
 
