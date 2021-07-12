@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.2.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 746ff07a830c2a82c7b63c6d6dcdf4d4954901451e034c01d79cfa7c4d47e60d
+-- hash: 7cc527642626a82662e26be3865d9c798b97e16d30e25e4eea9d7e07c2d59f9f
 
 name:           icfpc2021
 version:        0.1.0.0
@@ -72,6 +72,24 @@ library
     , utf8-string
     , vector
     , z3
+  default-language: Haskell2010
+
+executable check
+  main-is: check.hs
+  other-modules:
+      Paths_icfpc2021
+  hs-source-dirs:
+      app-check
+  ghc-options: -rtsopts -threaded
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , filepath
+    , icfpc2021
+    , mtl
+    , optparse-applicative
+    , text
   default-language: Haskell2010
 
 executable gui-helper
