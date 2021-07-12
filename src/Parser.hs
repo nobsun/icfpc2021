@@ -8,7 +8,7 @@
 {-# OPTIONS -Wno-name-shadowing #-}
 -- module to parse JSONs
 module Parser
-    ( Point (..)
+    ( Point (..), unPoint
     , Index
     , Edge (..)
     , Edges
@@ -30,7 +30,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 -- import System.FilePath (FilePath)
 
-import Types (BonusType (..))
+import Types (BonusType (..), Vec)
 import AesonArrayGeneric
   (genericParseArrayJSON, defaultAesonArrayOptions, genericToArrayJSON)
 
@@ -46,6 +46,10 @@ readProblem fp = decode <$> LBS.readFile fp
 data Point = Point { x :: Int
                    , y :: Int
                    } deriving (Show, Eq, Ord, Generic)
+
+unPoint :: Point -> Vec Int
+unPoint (Point { x = px, y = py }) = (px, py)
+
 {- |
 >>> decode "[1, 2]" :: Maybe Point
 Just (Point {x = 1, y = 2})
