@@ -2,13 +2,16 @@
 {-# LANGUAGE RecordWildCards #-}
 module PoseInfo where
 
+import qualified Data.Set as Set
 import Text.Printf (printf)
 
+import Types (BonusType)
 import qualified Hole
 import qualified Parser                        as P
 import           Parser                         ( Edge(..)
                                                 , Figure(..)
-                                                , Point(..)
+                                                , Point(..), unPoint
+                                                , BonusDef(..)
                                                 , Pose(..)
                                                 , Problem(..)
                                                 )
@@ -18,8 +21,11 @@ import qualified TwoDim
 data PoseInfo = PoseInfo
   { poseVertexInfo :: [PoseVertexInfo]
   , poseEdgeInfo   :: [PoseEdgeInfo]
+  , poseBonusInfo  :: [PoseBonusInfo]
   , poseDislikes   :: Int
   , poseIsValid    :: Bool
+  , anyBonusUnlocked    :: Bool
+  , allBonusUnlocked    :: Bool
   }
   deriving Show
 
@@ -39,9 +45,17 @@ data PoseEdgeInfo = PoseEdgeInfo
   }
   deriving Show
 
+data PoseBonusInfo = PoseBonusInfo
+  { bonusPosition :: (Int, Int)
+  , bonusType :: BonusType
+  , bonusProblem :: Int
+  , bonusUnlocked :: Bool
+  }
+  deriving Show
+
 -- TODO rename
 verifyPose :: P.Problem -> Pose -> PoseInfo
-verifyPose Problem { hole, figure, epsilon } pose@(Pose _bonus poseVertices) =
+verifyPose Problem { bonuses, hole, figure, epsilon } pose@(Pose _bonus poseVertices) =
   let holeEdges = zip hole (tail hole ++ [head hole]) in
   if length (vertices figure) /= length poseVertices then
     error "Wrong number of edge"
@@ -63,9 +77,20 @@ verifyPose Problem { hole, figure, epsilon } pose@(Pose _bonus poseVertices) =
                     , not (any (intersect poseEdge) holeEdges)
                     ]
             in PoseEdgeInfo { .. }
+        poseBonusInfo = maybe [] (map fromDef) bonuses
+          where vertexSet = Set.fromList $ map unPoint poseVertices
+                unlocked = (`Set.member` vertexSet)
+                fromDef (BonusDef {position, bonus, problem}) =
+                  let bonusPosition = unPoint position
+                      bonusType = bonus
+                      bonusProblem = problem
+                      bonusUnlocked = unlocked bonusPosition
+                  in PoseBonusInfo{..}
         poseDislikes = dislike hole pose
         poseIsValid = all valid poseEdgeInfo
           where valid PoseEdgeInfo{..} = tolerant && included
+        anyBonusUnlocked = any bonusUnlocked poseBonusInfo
+        allBonusUnlocked = all bonusUnlocked poseBonusInfo
       in PoseInfo {..}
 
 {-# DEPRECATED reportPose "use reportPoseInfo" #-}
@@ -80,11 +105,14 @@ reportPoseInfo_ h poseInfo =
   mapM_ putStrLn $ pprPoseInfo h poseInfo
 
 pprPoseInfo :: (String, PoseEdgeInfo -> String) -> PoseInfo -> [String]
-pprPoseInfo (header, edgeHeader) PoseInfo{poseEdgeInfo, poseDislikes, poseIsValid} =
+pprPoseInfo (header, edgeHeader) PoseInfo{poseEdgeInfo, poseBonusInfo, poseDislikes, poseIsValid, anyBonusUnlocked, allBonusUnlocked} =
   [ header <> "edge     length   possible_range  tolerant included" ] ++
   map (pprEdgeInfo edgeHeader) poseEdgeInfo ++
+  [ "position   bonus_type   problem unlocked" ] ++
+  map pprBonusInfo poseBonusInfo ++
   [ "validPose: " <> show poseIsValid,
-    "dislikes: " <> show poseDislikes ]
+    "dislikes: " <> show poseDislikes,
+    "anyUnlocked: " <> show anyBonusUnlocked <> " , allUnlocked: " <> show allBonusUnlocked ]
 
 pprEdgeInfo :: (PoseEdgeInfo -> String) -> PoseEdgeInfo -> String
 pprEdgeInfo header e@PoseEdgeInfo{..} =
@@ -98,6 +126,17 @@ pprEdgeInfo header e@PoseEdgeInfo{..} =
  where
   mark True  = "✔"
   mark False = "✘"
+
+pprBonusInfo :: PoseBonusInfo -> String
+pprBonusInfo PoseBonusInfo{..} =
+  mconcat
+  [ printf "(%3d,%3d)  " (fst bonusPosition) (snd bonusPosition),
+    printf "%-11s  " (show bonusType),
+    printf "%6d  " bonusProblem,
+    printf "   %s" (mark bonusUnlocked) ]
+  where
+    mark True  = "✔"
+    mark False = "✘"
 
 {-# ANN isValidPose "HLint: ignore Use &&" #-}
 isValidPose :: P.Problem -> Pose -> Bool
