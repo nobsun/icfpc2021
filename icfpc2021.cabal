@@ -180,6 +180,21 @@ executable play-gui
     ghc-options: -static
   default-language: Haskell2010
 
+executable solver-smt
+  main-is: solver-smt.hs
+  other-modules:
+      Main
+      Paths_icfpc2021
+  hs-source-dirs:
+      app
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , filepath
+    , icfpc2021
+  default-language: Haskell2010
+
 executable submit
   main-is: submit.hs
   other-modules:
