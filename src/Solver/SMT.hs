@@ -89,7 +89,7 @@ solve prob = do
             liftIO $ do
               hFlush stderr
               BL.putStrLn $ JSON.encode pose
-              PoseInfo.reportPose info
+              PoseInfo.reportPoseInfo info
               hFlush stdout
 
             actions <- liftM concat $ forM (zip [(0::Int)..] es) $ \(i, P.Edge s t) -> do
