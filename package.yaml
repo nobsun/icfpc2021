@@ -168,7 +168,14 @@ executables:
           - graphviz
         else:
           buildable: false
-    
+
+  z3help:
+    main:                z3help.hs
+    source-dirs:         app
+    other-modules:       []
+    dependencies:
+    - z3
+
 tests:
   icfpc2021-test:
     main:                spec.hs
