@@ -18,7 +18,7 @@ phi :: Context () P.BonusDef -> Context String String
 phi (froms, node, lab, tos) = (map conv froms, node, "", map conv tos)
   where
     conv (b,n) = (show (P.bonus b), n)
-                         
+
 path :: FilePath
 path = "data/problems"
 
