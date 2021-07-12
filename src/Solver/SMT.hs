@@ -310,33 +310,38 @@ isCrossing (x, y) (P.Point x1 y1, P.Point x2 y2) =
     y1' = fromIntegral y1
     y2' = fromIntegral y2
 
+data Session = Lightning | Main
+instance Show Session where
+  show Lightning = "lightning-problems"
+  show Main      = "problems"
+
+solveFor :: Session -> Int -> IO ()
+solveFor sess i = do
+  hPutStrLn stderr "==================================="
+  let fname = printf "data/%s/%03d.json" (show sess) i
+  hPutStrLn stderr fname
+
+  Just prob <- P.readProblem fname
+  let P.Figure{ P.edges = es, P.vertices = vs' } = P.figure prob
+      vs = V.fromList vs'
+      eps = P.epsilon prob
+
+  pose@P.Pose{ P.pose'vertices = ps } <- solve prob
+  JSON.encodeFile (printf "sol%03d.json" i) pose
+
+  let hole = P.hole prob
+  forM_ ps $ \p -> do
+    unless (Hole.isInsideHole p hole) $ do
+      hPrintf stderr "%d is not inside hole\n" (show p)
+
+  forM_ es $ \e@(P.Edge s t) -> do
+    let orig_d = distance (vs V.! s) (vs V.! t)
+    let min_d = orig_d + ceiling (- fromIntegral orig_d * fromIntegral eps / 1000000 :: Rational)
+    let max_d = orig_d + floor (fromIntegral orig_d * fromIntegral eps / 1000000 :: Rational)
+    let d = distance (ps !! s) (ps !! t)
+    unless (min_d <= d && d <= max_d) $ do
+      hPrintf stderr "(%s) (length %d) is mapped to (%s, %s) (length %d)\n" (show e) orig_d (show (ps !! s)) (show (ps !! t)) d
+      hPrintf stderr "But %d is not in [%d, %d]\n" d min_d max_d
 
 test :: IO ()
-test = do
-  forM_ [(1::Int)..59] $ \i -> do
-  -- forM_ [(8::Int), 28, 29, 32] $ \i -> do
-    hPutStrLn stderr "==================================="
-    let fname = printf "data/lightning-problems/%03d.json" i
-    hPutStrLn stderr fname
-
-    Just prob <- P.readProblem fname
-    let P.Figure{ P.edges = es, P.vertices = vs' } = P.figure prob
-        vs = V.fromList vs'
-        eps = P.epsilon prob
-
-    pose@P.Pose{ P.pose'vertices = ps } <- solve prob
-    JSON.encodeFile (printf "sol%03d.json" i) pose
-
-    let hole = P.hole prob
-    forM_ ps $ \p -> do
-      unless (Hole.isInsideHole p hole) $ do
-        hPrintf stderr "%d is not inside hole\n" (show p)
-
-    forM_ es $ \e@(P.Edge s t) -> do
-       let orig_d = distance (vs V.! s) (vs V.! t)
-       let min_d = orig_d + ceiling (- fromIntegral orig_d * fromIntegral eps / 1000000 :: Rational)
-       let max_d = orig_d + floor (fromIntegral orig_d * fromIntegral eps / 1000000 :: Rational)
-       let d = distance (ps !! s) (ps !! t)
-       unless (min_d <= d && d <= max_d) $ do
-         hPrintf stderr "(%s) (length %d) is mapped to (%s, %s) (length %d)\n" (show e) orig_d (show (ps !! s)) (show (ps !! t)) d
-         hPrintf stderr "But %d is not in [%d, %d]\n" d min_d max_d
+test = forM_ [(1::Int)..59] (solveFor Lightning)
