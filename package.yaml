@@ -53,6 +53,10 @@ flags:
     default: false
     manual: true
 
+  bonusdeps:
+    description: build bonusdeps which require GraphViz and graphviz packages
+    default: false
+    manual: true
 
 executables:
 
@@ -139,6 +143,20 @@ executables:
     dependencies:
     - icfpc2021
 
+  bonusdeps:
+    main:                bonusdeps.hs
+    source-dirs:         app-bonusdeps
+    when:
+      - condition: flag(bonusdeps)
+        then:
+          buildable: true
+          dependencies:
+          - icfpc2021
+          - fgl
+          - graphviz
+        else:
+          buildable: false
+    
 tests:
   icfpc2021-test:
     main:                spec.hs
