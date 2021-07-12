@@ -10,8 +10,9 @@ This is Team Sampou's repository for the [ICFP Programming Contest 2021](https:/
 
 Our approach includes:
 
-* Solving by hands :upside_down_face:
-* Solving using SMT solver [Z3]()
+* Solving by hands using GUI :upside_down_face:
+  * GUI is implemented using [OpenGL](https://hackage.haskell.org/package/OpenGL) using [GLFW-b](https://hackage.haskell.org/package/GLFW-b)
+* Solving using SMT solver [Z3](https://github.com/Z3Prover/z3)
   * We encode the problems of finding feasible solution as `QF_LIRA` SMT problems and invoked [Haskell binding](https://hackage.haskell.org/package/z3) to solve them.
   * Coordinates of points and differences between points are represented as integer variables. 
   * Since (-)² cannot be represented in `QF_LIRA`, we represent *x²* as a distinct variable and relationship between *x* and *x²* is enforced by a set of constraints.
