@@ -14,6 +14,7 @@ import Data.Ratio
 import qualified Data.Set as Set
 import qualified Data.Vector as V
 import System.IO
+import System.Environment (lookupEnv)
 import Text.Printf
 import qualified Z3.Monad as Z3
 
@@ -26,7 +27,9 @@ setParam :: Z3.MonadZ3 m => m ()
 setParam = do
   params <- Z3.mkParams
   threads <- Z3.mkStringSymbol "threads"
-  Z3.paramsSetUInt params threads 12
+  ths <- liftIO $ maybe (return 12) readIO =<< (lookupEnv "CUSTOM_Z3_THREADS")
+  liftIO $ putStrLn $ "solver-param threads: " ++ show ths
+  Z3.paramsSetUInt params threads ths
   Z3.solverSetParams params
 
 solve :: P.Problem -> IO P.Pose
@@ -36,7 +39,7 @@ solve prob = do
 
   Z3.evalZ3 $ do
     setParam
-    
+
     pointVars <- liftM V.fromList $ forM (zip [(0::Int)..] (V.toList vs)) $ \(i, _) -> do
       x <- Z3.mkIntVar =<< Z3.mkStringSymbol ("x" ++ show i)
       y <- Z3.mkIntVar =<< Z3.mkStringSymbol ("y" ++ show i)
