@@ -11,7 +11,7 @@ gui: icfpc2021.cabal
 	cabal v1-build $(jobs)
 
 check: icfpc2021.cabal
-	cabal v1-configure $(oflag) -f gui --enable-tests
+	cabal v1-configure $(oflag) -f gui -f bonusdeps --enable-tests
 	cabal v1-build $(jobs)
 	cabal v1-test
 
@@ -20,7 +20,7 @@ v2-check: icfpc2021.cabal
 	cabal v2-build $(jobs)
 	cabal v2-test
 
-icfpc2021.cabal: package.yaml
+icfpc2021.cabal:
 	hpack --force
 
 clean:
@@ -29,3 +29,5 @@ clean:
 
 v2-clean:
 	cabal v2-clean
+
+.PHONY: icfpc2021.cabal
