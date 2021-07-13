@@ -23,6 +23,11 @@ source-repository head
   type: git
   location: https://github.com/nobsun/icfpc2021
 
+flag bonusdeps
+  description: build bonusdeps which require GraphViz and graphviz packages
+  manual: True
+  default: False
+
 flag gui
   description: build playgui which requires OpenGL related libraries
   manual: True
@@ -35,54 +40,125 @@ flag static
 
 library
   exposed-modules:
+      AesonArrayGeneric
+      Bonus
       Graph
       Hole
-      Lib
       Parser
+      PoseInfo
+      ProcessIO
+      Score
       Segment
       Solver.BackTracking
       Solver.SAT
+      Solver.SMT
+      SubmitQueue
       TwoDim
+      Types
   other-modules:
       Paths_icfpc2021
   hs-source-dirs:
       src
+  ghc-options: -Wall
   build-depends:
       aeson
     , base >=4.7 && <5
     , bytestring
     , containers
+    , directory
     , fgl
     , filepath
+    , mtl
+    , process
+    , time
     , toysolver
+    , transformers
     , unicode-show
     , utf8-string
     , vector
+    , z3
   default-language: Haskell2010
 
-executable icfpc2021
-  main-is: Main.hs
+executable bonusdeps
+  main-is: bonusdeps.hs
   other-modules:
       Paths_icfpc2021
   hs-source-dirs:
-      app
-  ghc-options: -rtsopts
+      app-bonusdeps
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , filepath
+  if flag(bonusdeps)
+    build-depends:
+        fgl
+      , graphviz
+      , icfpc2021
+    buildable: True
+  else
+    buildable: False
+  default-language: Haskell2010
+
+executable check
+  main-is: check.hs
+  other-modules:
+      Paths_icfpc2021
+  hs-source-dirs:
+      app-check
+  ghc-options: -rtsopts -threaded
+  build-depends:
+      aeson
+    , base >=4.7 && <5
     , bytestring
     , filepath
     , icfpc2021
+    , mtl
+    , optparse-applicative
+    , text
   default-language: Haskell2010
 
-executable play-gui
-  main-is: play-gui.hs
-  other-modules:
-      Paths_icfpc2021
+executable gui-helper
+  main-is: gui-helper.hs
   hs-source-dirs:
       app-play
   ghc-options: -rtsopts -threaded
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , filepath
+  if flag(gui)
+    build-depends:
+        GLFW-b
+      , OpenGL
+      , StateVar
+      , base
+      , bytestring
+      , containers
+      , icfpc2021
+      , mtl
+      , optparse-applicative
+      , pretty
+      , process
+      , stm
+      , text
+      , transformers
+    buildable: True
+  else
+    buildable: False
+  if flag(static)
+    ghc-options: -static
+  default-language: Haskell2010
+
+executable play-gui
+  main-is: play-gui.hs
+  hs-source-dirs:
+      app-play
+  ghc-options: -rtsopts -threaded
+  build-depends:
+      aeson
+    , base >=4.7 && <5
     , bytestring
     , filepath
   if flag(gui)
@@ -96,6 +172,7 @@ executable play-gui
       , optparse-applicative
       , pretty
       , process
+      , random
       , stm
       , transformers
     buildable: True
@@ -105,13 +182,70 @@ executable play-gui
     ghc-options: -static
   default-language: Haskell2010
 
+executable solver-smt
+  main-is: solver-smt.hs
+  hs-source-dirs:
+      app
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , filepath
+    , icfpc2021
+  default-language: Haskell2010
+
+executable submit
+  main-is: submit.hs
+  other-modules:
+      Paths_icfpc2021
+  hs-source-dirs:
+      app-submit
+  ghc-options: -rtsopts -threaded
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , filepath
+    , http-client
+    , http-conduit
+    , mtl
+    , optparse-applicative
+    , text
+  default-language: Haskell2010
+
+executable submit-gateway
+  main-is: gateway.hs
+  hs-source-dirs:
+      app
+  ghc-options: -rtsopts -threaded
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , filepath
+    , icfpc2021
+  default-language: Haskell2010
+
+executable z3help
+  main-is: z3help.hs
+  hs-source-dirs:
+      app
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , filepath
+    , z3
+  default-language: Haskell2010
+
 test-suite icfpc2021-doctest
   type: exitcode-stdio-1.0
   main-is: doctests.hs
   hs-source-dirs:
       test
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , bytestring
     , doctest
     , filepath
@@ -124,10 +258,12 @@ test-suite icfpc2021-test
   other-modules:
       LibSpec
       HoleSpec
+      ScoreSpec
   hs-source-dirs:
       test
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , bytestring
     , fgl
     , filepath

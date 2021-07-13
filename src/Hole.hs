@@ -28,7 +28,7 @@ isInsideHole p h =
 isOn :: P.Point -> (P.Point, P.Point) -> Bool
 isOn (P.Point x y) (P.Point x1 y1, P.Point x2 y2)
   | not (y1 <= y && y <= y2) && not (y2 <= y && y <= y1) = False
-  | y1 == y2 = x1 <= x && x <= x2
+  | y1 == y2 = x1 <= x && x <= x2 || x2 <= x && x <= x1
   | otherwise = (fromIntegral x :: Rational) == fromIntegral x1 + fromIntegral (y - y1) * (fromIntegral (x2 - x1) % fromIntegral (y2 - y1))
 
 -- https://www.nttpc.co.jp/technology/number_algorithm.html

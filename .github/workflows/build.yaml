@@ -30,3 +30,14 @@ jobs:
 
       - name: Test
         run: stack test
+
+  slack-notify:
+    if: always()
+    needs: [build]
+    name: workflow notification to slack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Gamesight/slack-workflow-status@master
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}

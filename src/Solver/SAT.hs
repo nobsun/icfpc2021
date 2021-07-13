@@ -53,7 +53,7 @@ solve prob = do
   ret <- SAT.solve solver
   m <- SAT.getModel solver
 
-  let sol = P.Pose [head [p | (p, var) <- Map.toList xs, SAT.evalLit m var] | (v, i) <- zip (V.toList vs) [0..], let xs = xss Map.! i]
+  let sol = P.Pose Nothing [head [p | (p, var) <- Map.toList xs, SAT.evalLit m var] | (v, i) <- zip (V.toList vs) [0..], let xs = xss Map.! i]
   return sol
 
   where

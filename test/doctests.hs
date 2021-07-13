@@ -6,7 +6,9 @@ main :: IO ()
 main = doctest [ "-isrc"
                , "-package aeson"
                , "-package fgl"
+               , "-package vector"
                , "src/Parser.hs"
-               , "src/Segment"
-               , "src/TwoDim"
+               , "src/Score.hs"
+               , "src/Segment.hs"
+               , "src/TwoDim.hs"
                ]
