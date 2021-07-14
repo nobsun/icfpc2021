@@ -33,6 +33,11 @@ flag gui
   manual: True
   default: False
 
+flag solver-mip
+  description: enable Solver.MIP module which requires MIP package
+  manual: True
+  default: False
+
 flag solver-sat
   description: enable Solver.SAT module which requires toysolver package
   manual: True
@@ -55,6 +60,7 @@ library
       Score
       Segment
       Solver.BackTracking
+      Solver.MIP
       Solver.SAT
       Solver.SMT
       SubmitQueue
@@ -75,6 +81,7 @@ library
     , filepath
     , mtl
     , process
+    , scientific
     , time
     , transformers
     , unicode-show
@@ -85,6 +92,10 @@ library
     cpp-options: -DENABLE_SOLVER_SAT
     build-depends:
         toysolver ==0.7.0
+  if flag(solver-mip)
+    cpp-options: -DENABLE_SOLVER_MIP
+    build-depends:
+        MIP >=0.1.1 && <0.2
   default-language: Haskell2010
 
 executable bonusdeps

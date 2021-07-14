@@ -39,12 +39,17 @@ library:
   - time
   - directory
   - process
+  - scientific
   ghc-options: -Wall
   when:
     - condition: flag(solver-sat)
       dependencies:
       - toysolver ==0.7.0
       cpp-options: -DENABLE_SOLVER_SAT
+    - condition: flag(solver-mip)
+      dependencies:
+      - MIP >=0.1.1 && <0.2
+      cpp-options: -DENABLE_SOLVER_MIP
 
 flags:
   static:
@@ -59,6 +64,11 @@ flags:
 
   bonusdeps:
     description: build bonusdeps which require GraphViz and graphviz packages
+    default: false
+    manual: true
+
+  solver-mip:
+    description: enable Solver.MIP module which requires MIP package
     default: false
     manual: true
 
