@@ -33,6 +33,11 @@ flag gui
   manual: True
   default: False
 
+flag solver-sat
+  description: enable Solver.SAT module which requires toysolver package
+  manual: True
+  default: False
+
 flag static
   description: build statically linked binaries
   manual: True
@@ -71,12 +76,15 @@ library
     , mtl
     , process
     , time
-    , toysolver
     , transformers
     , unicode-show
     , utf8-string
     , vector
     , z3
+  if flag(static)
+    cpp-options: -DENABLE_SOLVER_SAT
+    build-depends:
+        toysolver ==0.7.0
   default-language: Haskell2010
 
 executable bonusdeps

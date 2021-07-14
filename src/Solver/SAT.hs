@@ -1,3 +1,11 @@
+{-# LANGUAGE CPP #-}
+
+#ifndef ENABLE_SOLVER_SAT
+
+module Solver.SAT where
+
+#else
+
 {-# LANGUAGE DisambiguateRecordFields #-}
 module Solver.SAT
   ( solve
@@ -73,3 +81,5 @@ distance (P.Point x1 y1) (P.Point x2 y2) = (x2 - x1)^(2::Int) + (y2 - y1)^(2::In
 unorderedPairs :: [a] -> [(a, a)]
 unorderedPairs [] = []
 unorderedPairs xxs@(x:xs) = [(x,y) | y <- xxs] ++ unorderedPairs xs
+
+#endif
