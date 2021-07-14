@@ -195,6 +195,7 @@ executables:
     other-modules:       []
     dependencies:
       - icfpc2021
+      - data-default-class
 
   z3help:
     main:                z3help.hs

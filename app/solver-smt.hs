@@ -1,6 +1,7 @@
 
 import Solver.SMT (solveFor, Session (..))
 
+import Data.Default.Class
 import Text.Read (readMaybe)
 import System.IO
  (BufferMode(LineBuffering), hSetBuffering, stderr, stdout)
@@ -16,4 +17,4 @@ main = do
   hSetBuffering stdout LineBuffering
   hSetBuffering stderr LineBuffering
 
-  solveFor Main n
+  solveFor def Main n

@@ -351,8 +351,8 @@ instance Show Session where
   show Lightning = "lightning-problems"
   show Main      = "problems"
 
-solveFor :: Session -> Int -> IO ()
-solveFor sess i = do
+solveFor :: Options -> Session -> Int -> IO ()
+solveFor opt sess i = do
   hPutStrLn stderr "==================================="
   let fname = printf "data/%s/%03d.json" (show sess) i
   hPutStrLn stderr fname
@@ -362,7 +362,7 @@ solveFor sess i = do
       vs = V.fromList vs'
       eps = P.epsilon prob
 
-  pose@P.Pose{ P.pose'vertices = ps } <- solve prob
+  pose@P.Pose{ P.pose'vertices = ps } <- solveWith opt prob
   JSON.encodeFile (printf "sol%03d.json" i) pose
 
   let hole = P.hole prob
@@ -380,4 +380,4 @@ solveFor sess i = do
       hPrintf stderr "But %d is not in [%d, %d]\n" d min_d max_d
 
 test :: IO ()
-test = forM_ [(1::Int)..59] (solveFor Lightning)
+test = forM_ [(1::Int)..59] (solveFor def Lightning)
