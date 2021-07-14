@@ -44,6 +44,7 @@ solve = solveWith def
 data Options
   = Options
   { optThreads :: Maybe Word
+  , optZeroDislikes :: Bool
   }
   deriving (Eq, Show)
 
@@ -51,6 +52,7 @@ instance Default Options where
   def =
     Options
     { optThreads = Nothing
+    , optZeroDislikes = False
     }
 
 solveWith :: Options -> P.Problem -> IO P.Pose
@@ -100,6 +102,12 @@ solveWith opt prob = do
       Z3.solverAssertCnstr =<< Z3.mkLe d max_d'
 
       return (dx,dy,dx2,dy2)
+
+    when (optZeroDislikes opt) $ do
+      forM_ hole $ \(P.Point x y) -> do
+        x' <- Z3.mkIntNum x
+        y' <- Z3.mkIntNum y
+        Z3.solverAssertCnstr =<< Z3.mkOr =<< sequence [Z3.mkAnd =<< sequence [Z3.mkEq x' x2', Z3.mkEq y' y2'] | (x2',y2') <- V.toList pointVars]
 
     let loop :: Int -> Z3.Z3 (Maybe (V.Vector P.Point))
         loop !k = do
