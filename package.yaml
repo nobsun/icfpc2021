@@ -23,20 +23,30 @@ dependencies:
 - base >= 4.7 && < 5
 - bytestring
 - filepath
+- aeson
 
 library:
   source-dirs: src
   dependencies:
   - utf8-string
   - unicode-show
-  - aeson
   - fgl
   - containers
-  - scientific
-  - time
+  - transformers
   - vector
+  - z3
+  - mtl
+  - time
+  - directory
+  - process
+  - scientific
   - MIP >=0.1.1 && <0.2
-  ## - toysolver
+  ghc-options: -Wall
+  when:
+    - condition: flag(solver-sat)
+      dependencies:
+      - toysolver ==0.7.0
+      cpp-options: -DENABLE_SOLVER_SAT
 
 flags:
   static:
@@ -49,21 +59,22 @@ flags:
     default: false
     manual: true
 
+  bonusdeps:
+    description: build bonusdeps which require GraphViz and graphviz packages
+    default: false
+    manual: true
+
+  solver-sat:
+    description: enable Solver.SAT module which requires toysolver package
+    default: false
+    manual: true  
 
 executables:
-  icfpc2021:
-    main:                Main.hs
-    source-dirs:         app
-    ghc-options:
-    - -rtsopts
-    # - -threaded
-    # - -with-rtsopts=-N
-    dependencies:
-    - icfpc2021
 
   play-gui:
     main:                play-gui.hs
     source-dirs:         app-play
+    other-modules:       []
     ghc-options:
     - -rtsopts
     - -threaded
@@ -83,10 +94,105 @@ executables:
           - pretty
           - stm
           - transformers
+          - random
         else:
           buildable: false
       - condition: flag(static)
         ghc-options: -static
+
+  gui-helper:
+    main:                gui-helper.hs
+    other-modules:       []
+    source-dirs:         app-play
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    when:
+      - condition: flag(gui)
+        then:
+          buildable: true
+          dependencies:
+          - icfpc2021
+          - bytestring
+          - containers
+          - process
+          - GLFW-b
+          - OpenGL
+          - base
+          - mtl
+          - optparse-applicative
+          - pretty
+          - StateVar
+          - stm
+          - transformers
+          - text
+        else:
+          buildable: false
+      - condition: flag(static)
+        ghc-options: -static
+
+  check:
+    main:                check.hs
+    source-dirs:         app-check
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    dependencies:
+    - icfpc2021
+    - optparse-applicative
+    - mtl
+    - text
+
+  submit:
+    main:                submit.hs
+    source-dirs:         app-submit
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    dependencies:
+    - http-client
+    - http-conduit
+    - optparse-applicative
+    - mtl
+    - text
+
+  submit-gateway:
+    main:                gateway.hs
+    source-dirs:         app
+    other-modules:       []
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    dependencies:
+    - icfpc2021
+
+  bonusdeps:
+    main:                bonusdeps.hs
+    source-dirs:         app-bonusdeps
+    when:
+      - condition: flag(bonusdeps)
+        then:
+          buildable: true
+          dependencies:
+          - icfpc2021
+          - fgl
+          - graphviz
+        else:
+          buildable: false
+
+  solver-smt:
+    main:                solver-smt.hs
+    source-dirs:         app
+    other-modules:       []
+    dependencies:
+      - icfpc2021
+
+  z3help:
+    main:                z3help.hs
+    source-dirs:         app
+    other-modules:       []
+    dependencies:
+    - z3
 
 tests:
   icfpc2021-test:
@@ -94,6 +200,7 @@ tests:
     other-modules:
     - LibSpec
     - HoleSpec
+    - ScoreSpec
     source-dirs:         test
     # ghc-options:
     # - -threaded

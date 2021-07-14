@@ -6,7 +6,7 @@
     set -x
     cd data/problems
 
-    for i in $(seq 1 59); do
+    for i in $(seq 1 132); do
         n=$(printf "%03d" ${i})
         if [ -r ${n}.json ]; then
             continue

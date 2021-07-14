@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main (main) where
 
 --------------------------------------------------------------------------------
@@ -6,19 +7,23 @@ import Control.Concurrent.STM    (TQueue, atomically, newTQueueIO, tryReadTQueue
 import Control.Exception
 import Control.Monad             (foldM, liftM, unless, when, void)
 import Control.Monad.RWS.Strict  (RWST, ask, asks, evalRWST, get, liftIO, modify, put)
+import qualified Data.Aeson                as A
 import Data.List                 (elemIndex)
-import Data.Maybe                (catMaybes, isJust, fromJust, listToMaybe)
-import Data.IntMap.Lazy (IntMap)
+import Data.Maybe                (catMaybes, isJust, fromJust, listToMaybe, fromMaybe)
+import Data.IntMap.Lazy          (IntMap)
 import qualified Data.IntMap.Lazy          as IntMap
 import qualified Data.Map                  as Map
 import Options.Applicative
 import System.IO
+import Text.Printf (printf)
 
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.UI.GLFW          as GLFW
 
-
-import qualified Solver.BackTracking as Bk
+import Types
+import qualified Solver.BackTracking       as Bk
+import qualified Parser as P
+import           Parser (Figure(..))
 
 
 
@@ -43,6 +48,7 @@ data State = State
     , stateDislike         :: !Int
     , stateSelectedNode    :: Maybe Int
     , stateBk              :: Bk.Bk
+    , stateMoveCount       :: Int
     , stateHistory         :: [(Int, Int)]
     }
 
@@ -77,11 +83,13 @@ data Options
   = Options
   { optHistory :: Maybe [(Int, Int)]
   , optDumpEvents :: Bool
+  , optProblemNumber :: Int
+  , optPose :: Maybe FilePath
   }
   deriving (Show)
 
 optionsParser :: Parser Options
-optionsParser = Options <$> history <*> dumpEvents
+optionsParser = Options <$> history <*> dumpEvents <*> problemNumber <*> pose
   where
     history :: Parser (Maybe [(Int, Int)])
     history = optional $ option auto $ mconcat
@@ -96,17 +104,40 @@ optionsParser = Options <$> history <*> dumpEvents
       , help "dump OpenGL events"
       ]
 
+    problemNumber :: Parser Int
+    problemNumber = option auto $ mconcat
+      [ long "problem"
+      , help "problem number"
+      , metavar "NUM"
+      , value 1
+      ]
+
+    pose :: Parser (Maybe FilePath)
+    pose = optional $ strOption $ mconcat
+      [ long "pose"
+      , metavar "FILE"
+      ]
+
 parserInfo :: ParserInfo Options
-parserInfo = info (helper <*> optionsParser) $ fullDesc
+parserInfo = info (helper <*> optionsParser) fullDesc
 
 main :: IO ()
 main = do
     opt <- execParser parserInfo
 
+    problem <- fromMaybe (error "parsing problem") <$>
+      P.readProblem (printf "./data/problems/%03d.json" (optProblemNumber opt))
+    mPose :: Maybe P.Pose <- case optPose opt of
+      Nothing -> pure Nothing
+      Just f -> fromMaybe (error "parsing pose") <$> A.decodeFileStrict' f
+
     let width  = 640
         height = 480
 
     eventsChan <- newTQueueIO :: IO (TQueue Event)
+
+    hSetBuffering stdout LineBuffering
+    hSetBuffering stderr LineBuffering
 
     withWindow width height "ICFPc 2021" $ \win -> do
         GLFW.setErrorCallback               $ Just $ errorCallback           eventsChan
@@ -134,21 +165,25 @@ main = do
               , envWindow        = win
               , envOptions       = opt
               }
-            es = [(2, 5), (5, 4), (4, 1), (1, 0), (0, 8), (8, 3), (3, 7),(7, 11), (11, 13), (13, 12), (12, 18), (18, 19), (19, 14),(14, 15), (15, 17), (17, 16), (16, 10), (10, 6), (6, 2),(8, 12), (7, 9), (9, 3), (8, 9), (9, 12), (13, 9), (9, 11),(4, 8), (12, 14), (5, 10), (10, 15)]
-            vs = [(20, 30), (20, 40), (30, 95), (40, 15), (40, 35), (40, 65),(40, 95), (45, 5), (45, 25), (50, 15), (50, 70), (55, 5),(55, 25), (60, 15), (60, 35), (60, 65), (60, 95), (70, 95),(80, 30), (80, 40)]
+            h  = map (\(P.Point x y) -> (x,y)) $ P.hole problem
+            es = map (\(P.Edge  s e) -> (s,e)) $ P.edges (P.figure problem)
+            vs = map (\(P.Point x y) -> (x,y)) $ case mPose of
+              Nothing           -> vertices (P.figure problem)
+              Just (P.Pose {P.pose'vertices = vs'}) -> vs'
             state_ = State
               { stateWindowWidth     = winWidth
               , stateWindowHeight    = winHeight
               , stateFBWidth         = fbWidth
               , stateFBHeight        = fbHeight
               , statePoint           = Nothing
-              , stateHole            = [(55, 80), (65, 95), (95, 95), (35, 5), (5, 5), (35, 50), (5, 95), (35, 95), (45, 80)] -- lamda (sample)
+              , stateHole            = h
               , stateEdges           = es
               , stateVertices        = vs
               , stateEpsilon         = 1
               , stateDislike         = 0
               , stateSelectedNode    = Nothing
-              , stateBk              = Bk.mkBk vs es
+              , stateBk              = Bk.mkBk problem
+              , stateMoveCount       = 0
               , stateHistory         = []
               }
 
@@ -223,7 +258,7 @@ runDemo env state =
 
 run :: Demo ()
 run = do
-    liftIO $ GLFW.waitEvents
+    liftIO GLFW.waitEvents
     processEvents
 
     win <- asks envWindow
@@ -295,11 +330,12 @@ processEvent ev =
                   y' = ((round y-(height`div`2))*2*sizeY)`div`height-- because GL.ortho (-sizeX) (sizeX)
                   bk = stateBk state
                   vs = stateVertices state
+                  count = stateMoveCount state
                   (sel,bk',vs') =
-                      case (stateSelectedNode state, (x',y')`nearElemIndex`vs) of
+                      case (stateSelectedNode state, (x',y')`nearElemIndex`(if count`mod`2==0 then vs else reverse vs)) of
                         (Nothing, Nothing) -> (Nothing, bk, vs)
                         (Nothing, Just n)  -> (Just n, bk, vs)
-                        (Just n, _)  -> case Bk.move bk n (x',y') of
+                        (Just n, _)  -> case Bk.move bk count n (x',y') of
                                           Nothing -> (Nothing, bk, vs)
                                           Just bk'-> (Nothing, bk', Map.elems (Bk.vertices bk'))
               modify $ \s -> s
@@ -307,6 +343,7 @@ processEvent ev =
                 , stateSelectedNode = sel
                 , stateBk = bk'
                 , stateVertices = vs'
+                , stateMoveCount = count+1
                 }
               printEvent "mouse clicked" [show x', show y']
               printEvent "selected" [show sel]
@@ -336,19 +373,30 @@ processEvent ev =
 
       (EventChar _ c) -> do
           state <- get
-          let (dx,dy) = case c of
-                       'a' -> (-1, 0)
-                       'd' -> ( 1, 0)
-                       'w' -> ( 0,-1)
-                       's' -> ( 0, 1)
-              vs' = [(x+dx,y+dy) | (x,y) <-stateVertices state]
+          let bk = stateBk state
+              vs = stateVertices state
+              vs' = case c of
+                       'a' -> map (move(-1, 0, 1 ,1)) vs
+                       'd' -> map (move( 1, 0, 1, 1)) vs
+                       'w' -> map (move( 0,-1, 1, 1)) vs
+                       's' -> map (move( 0, 1, 1, 1)) vs
+                       'x' -> map (move( 0, 0,-1, 1)) vs
+                       'y' -> map (move( 0, 0, 1,-1)) vs
+                       'r' -> map rotate vs
+                       _   -> let bk' = Bk.autoTuneEdges bk in Map.elems ( Bk.vertices bk')
           modify $ \s -> s
             { stateVertices = vs'
+            , stateBk = bk{Bk.vertices=Map.fromList (zip [0..] vs')}
             }
           printEvent "char" [show c]
           printEvent "vertices" [show vs']
           draw
 
+move :: (Int,Int,Int,Int) -> (Int,Int) -> (Int,Int)
+move (dx,dy,mx,my) (x,y) = (mx*(x+dx),my*(y+dy))
+
+rotate :: (Int,Int) -> (Int,Int)
+rotate (x, y) = (y, -x)
 
 nearElemIndex :: (Int,Int) -> [(Int,Int)] -> Maybe Int
 nearElemIndex (x,y) as =
@@ -392,7 +440,7 @@ edgeToV vertices edges =
 printEvent :: String -> [String] -> Demo ()
 printEvent cbname fields = do
     env <- ask
-    when (optDumpEvents $ envOptions $ env) $ do
+    when (optDumpEvents $ envOptions env) $ do
       liftIO $ putStrLn $ cbname ++ ": " ++ unwords fields
 
 showModifierKeys :: GLFW.ModifierKeys -> String
@@ -406,4 +454,3 @@ showModifierKeys mk =
          , if GLFW.modifierKeysAlt     mk then Just "alt"     else Nothing
          , if GLFW.modifierKeysSuper   mk then Just "super"   else Nothing
          ]
-
