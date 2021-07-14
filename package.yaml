@@ -40,6 +40,7 @@ library:
   - directory
   - process
   - scientific
+  - data-default-class
   ghc-options: -Wall
   when:
     - condition: flag(solver-sat)
@@ -194,6 +195,7 @@ executables:
     other-modules:       []
     dependencies:
       - icfpc2021
+      - optparse-applicative
 
   z3help:
     main:                z3help.hs

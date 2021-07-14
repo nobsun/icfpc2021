@@ -76,6 +76,7 @@ library
     , base >=4.7 && <5
     , bytestring
     , containers
+    , data-default-class
     , directory
     , fgl
     , filepath
@@ -211,6 +212,7 @@ executable solver-smt
     , bytestring
     , filepath
     , icfpc2021
+    , optparse-applicative
   default-language: Haskell2010
 
 executable submit
