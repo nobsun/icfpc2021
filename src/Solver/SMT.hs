@@ -44,6 +44,7 @@ solve = solveWith def
 data Options
   = Options
   { optThreads :: Maybe Word
+  , optLinearizeSquare :: Bool
   }
   deriving (Eq, Show)
 
@@ -51,6 +52,7 @@ instance Default Options where
   def =
     Options
     { optThreads = Nothing
+    , optLinearizeSquare = True
     }
 
 solveWith :: Options -> P.Problem -> IO P.Pose
@@ -91,8 +93,8 @@ solveWith opt prob = do
 
       dx2 <- Z3.mkIntVar =<< Z3.mkStringSymbol ("e" ++ show i ++ "dx2")
       dy2 <- Z3.mkIntVar =<< Z3.mkStringSymbol ("e" ++ show i ++ "dy2")
-      assertIsSquare dx dx2 lim
-      assertIsSquare dy dy2 lim
+      assertIsSquare opt dx dx2 lim
+      assertIsSquare opt dy dy2 lim
       d <- Z3.mkAdd [dx2, dy2]
       min_d' <- Z3.mkIntNum min_d
       max_d' <- Z3.mkIntNum max_d
@@ -171,20 +173,23 @@ solveWith opt prob = do
     eps = P.epsilon prob
 
 
-assertIsSquare :: Z3.AST -> Z3.AST -> Int -> Z3.Z3 ()
-assertIsSquare x x2 lim = do
-  zero <- Z3.mkIntNum (0 :: Int)
-  Z3.solverAssertCnstr =<< Z3.mkGe x2 zero
-  Z3.solverAssertCnstr =<< Z3.mkLe x2 =<< Z3.mkIntNum (lim*lim)
-  forM_ [0..lim] $ \n -> do
-    lb <- Z3.mkIntNum (- n)
-    ub <- Z3.mkIntNum n
-    pre1 <- Z3.mkAnd =<< sequence [Z3.mkLe lb x, Z3.mkLe x ub]
-    post1 <- Z3.mkLe x2 =<< Z3.mkIntNum (n*n)
-    Z3.solverAssertCnstr =<< Z3.mkImplies pre1 post1
-    pre2 <- Z3.mkOr =<< sequence [Z3.mkGe lb x, Z3.mkGe x ub]
-    post2 <- Z3.mkGe x2 =<< Z3.mkIntNum (n*n)
-    Z3.solverAssertCnstr =<< Z3.mkImplies pre2 post2
+assertIsSquare :: Options -> Z3.AST -> Z3.AST -> Int -> Z3.Z3 ()
+assertIsSquare opt x x2 lim = do
+  if optLinearizeSquare opt then do
+    zero <- Z3.mkIntNum (0 :: Int)
+    Z3.solverAssertCnstr =<< Z3.mkGe x2 zero
+    Z3.solverAssertCnstr =<< Z3.mkLe x2 =<< Z3.mkIntNum (lim*lim)
+    forM_ [0..lim] $ \n -> do
+      lb <- Z3.mkIntNum (- n)
+      ub <- Z3.mkIntNum n
+      pre1 <- Z3.mkAnd =<< sequence [Z3.mkLe lb x, Z3.mkLe x ub]
+      post1 <- Z3.mkLe x2 =<< Z3.mkIntNum (n*n)
+      Z3.solverAssertCnstr =<< Z3.mkImplies pre1 post1
+      pre2 <- Z3.mkOr =<< sequence [Z3.mkGe lb x, Z3.mkGe x ub]
+      post2 <- Z3.mkGe x2 =<< Z3.mkIntNum (n*n)
+      Z3.solverAssertCnstr =<< Z3.mkImplies pre2 post2
+  else do
+    Z3.solverAssertCnstr =<< Z3.mkEq x2 =<< Z3.mkMul [x, x]
 
 
 -- x2 が x の二乗でない場合に、その反例をブロックする制約条件を返す

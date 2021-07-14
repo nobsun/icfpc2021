@@ -17,11 +17,15 @@ optionsParser :: Parser Options
 optionsParser = Options <$> solver <*> problemNumber
   where
     solver :: Parser Solver.Options
-    solver = Solver.Options <$> threads
+    solver = Solver.Options <$> threads <*> linearizeSquare
     
     threads :: Parser (Maybe Word)
     threads = optional $ option auto $ mconcat
       [long "threads", metavar "NUM", help "number of Z3 threads"]
+
+    linearizeSquare :: Parser Bool
+    linearizeSquare = flag True False $ mconcat
+      [long "no-linearize-square", help "do not perform linearization of (-)²"]
 
     problemNumber :: Parser Int
     problemNumber = argument auto $ mconcat
