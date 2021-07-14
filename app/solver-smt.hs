@@ -17,11 +17,15 @@ optionsParser :: Parser Options
 optionsParser = Options <$> solver <*> problemNumber
   where
     solver :: Parser Solver.Options
-    solver = Solver.Options <$> threads
+    solver = Solver.Options <$> threads <*> zeroDislikes
     
     threads :: Parser (Maybe Word)
     threads = optional $ option auto $ mconcat
       [long "threads", metavar "NUM", help "number of Z3 threads"]
+
+    zeroDislikes :: Parser Bool
+    zeroDislikes = switch $ mconcat
+      [long "zero-dislikes", help "find a solution with dislikes=0"]
 
     problemNumber :: Parser Int
     problemNumber = argument auto $ mconcat
