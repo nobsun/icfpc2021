@@ -1,6 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
 module Solver.SMT
   ( solve
+  , solveWith
+  , Options (..)
+
   , solveFor, Session (..)
   , test
   ) where
@@ -9,6 +12,7 @@ import Control.Monad
 import Control.Monad.Trans
 import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Lazy.Char8 as BL
+import Data.Default.Class
 import Data.Maybe
 import Data.Monoid
 import Data.Ratio
@@ -34,7 +38,19 @@ setParam = do
   Z3.solverSetParams params
 
 solve :: P.Problem -> IO P.Pose
-solve prob = do
+solve prob = solveWith def prob
+
+data Options
+  = Options
+  {
+  }
+  deriving (Eq, Show)
+
+instance Default Options where
+  def = Options
+
+solveWith :: Options -> P.Problem -> IO P.Pose
+solveWith opt prob = do
   hPrintf stderr "#vertices = %d\n" (length vs)
   hPrintf stderr "#edges = %d\n" (length es)
 

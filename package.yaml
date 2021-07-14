@@ -40,6 +40,7 @@ library:
   - directory
   - process
   - scientific
+  - data-default-class
   ghc-options: -Wall
   when:
     - condition: flag(solver-sat)
