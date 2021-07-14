@@ -28,26 +28,33 @@ import qualified PoseInfo
 import qualified Hole
 
 
-setParam :: Z3.MonadZ3 m => m ()
-setParam = do
+setParam :: Z3.MonadZ3 m => Options -> m ()
+setParam opt = do
   params <- Z3.mkParams
-  threads <- Z3.mkStringSymbol "threads"
-  ths <- liftIO $ maybe (return 12) readIO =<< (lookupEnv "CUSTOM_Z3_THREADS")
-  liftIO $ putStrLn $ "solver-param threads: " ++ show ths
-  Z3.paramsSetUInt params threads ths
+  case optThreads opt of
+    Nothing -> return ()
+    Just ths -> do
+      threads <- Z3.mkStringSymbol "threads"
+      liftIO $ putStrLn $ "solver-param threads: " ++ show ths
+      Z3.paramsSetUInt params threads ths
   Z3.solverSetParams params
 
 solve :: P.Problem -> IO P.Pose
-solve prob = solveWith def prob
+solve prob = do
+  ths <- maybe (return 12) readIO =<< (lookupEnv "CUSTOM_Z3_THREADS")
+  solveWith def{ optThreads = Just ths } prob
 
 data Options
   = Options
-  {
+  { optThreads :: Maybe Word
   }
   deriving (Eq, Show)
 
 instance Default Options where
-  def = Options
+  def =
+    Options
+    { optThreads = Nothing
+    }
 
 solveWith :: Options -> P.Problem -> IO P.Pose
 solveWith opt prob = do
@@ -55,7 +62,7 @@ solveWith opt prob = do
   hPrintf stderr "#edges = %d\n" (length es)
 
   Z3.evalZ3 $ do
-    setParam
+    setParam opt
 
     pointVars <- liftM V.fromList $ forM (zip [(0::Int)..] (V.toList vs)) $ \(i, _) -> do
       x <- Z3.mkIntVar =<< Z3.mkStringSymbol ("x" ++ show i)
