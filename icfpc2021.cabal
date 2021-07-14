@@ -81,7 +81,7 @@ library
     , utf8-string
     , vector
     , z3
-  if flag(static)
+  if flag(solver-sat)
     cpp-options: -DENABLE_SOLVER_SAT
     build-depends:
         toysolver ==0.7.0

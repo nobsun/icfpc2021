@@ -41,7 +41,7 @@ library:
   - process
   ghc-options: -Wall
   when:
-    - condition: flag(static)
+    - condition: flag(solver-sat)
       dependencies:
       - toysolver ==0.7.0
       cpp-options: -DENABLE_SOLVER_SAT
