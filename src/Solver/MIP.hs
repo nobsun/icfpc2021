@@ -1,4 +1,12 @@
 {-# OPTIONS_GHC -Wall #-}
+{-# LANGUAGE CPP #-}
+
+#ifndef ENABLE_SOLVER_MIP
+
+module Solver.MIP where
+
+#else
+
 {-# LANGUAGE DisambiguateRecordFields #-}
 module Solver.MIP
   ( solve
@@ -123,3 +131,5 @@ offsets eps d = [(x,y) | x <- [- z .. z], y <- [-z .. z], let d' = x*x + y*y, mi
     min_d = d + ceiling (- fromIntegral d * fromIntegral eps / 1000000 :: Rational)
     max_d = d + floor (fromIntegral d * fromIntegral eps / 1000000 :: Rational)
     z = ceiling (sqrt (fromIntegral max_d + 0.0001 :: Double))
+
+#endif
