@@ -19,7 +19,6 @@ import Data.Ratio
 import qualified Data.Set as Set
 import qualified Data.Vector as V
 import System.IO
-import System.Environment (lookupEnv)
 import Text.Printf
 import qualified Z3.Monad as Z3
 
@@ -40,9 +39,7 @@ setParam opt = do
   Z3.solverSetParams params
 
 solve :: P.Problem -> IO P.Pose
-solve prob = do
-  ths <- maybe (return 12) readIO =<< (lookupEnv "CUSTOM_Z3_THREADS")
-  solveWith def{ optThreads = Just ths } prob
+solve = solveWith def
 
 data Options
   = Options

@@ -210,9 +210,9 @@ executable solver-smt
       aeson
     , base >=4.7 && <5
     , bytestring
-    , data-default-class
     , filepath
     , icfpc2021
+    , optparse-applicative
   default-language: Haskell2010
 
 executable submit
