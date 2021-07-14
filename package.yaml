@@ -39,8 +39,12 @@ library:
   - time
   - directory
   - process
-  ## - toysolver
   ghc-options: -Wall
+  when:
+    - condition: flag(static)
+      dependencies:
+      - toysolver ==0.7.0
+      cpp-options: -DENABLE_SOLVER_SAT
 
 flags:
   static:
@@ -57,6 +61,11 @@ flags:
     description: build bonusdeps which require GraphViz and graphviz packages
     default: false
     manual: true
+
+  solver-sat:
+    description: enable Solver.SAT module which requires toysolver package
+    default: false
+    manual: true  
 
 executables:
 
