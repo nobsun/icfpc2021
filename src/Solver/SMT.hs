@@ -1,6 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
 module Solver.SMT
   ( solve
+  , solveWith
+  , Options (..)
+
   , solveFor, Session (..)
   , test
   ) where
@@ -9,13 +12,13 @@ import Control.Monad
 import Control.Monad.Trans
 import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Lazy.Char8 as BL
+import Data.Default.Class
 import Data.Maybe
 import Data.Monoid
 import Data.Ratio
 import qualified Data.Set as Set
 import qualified Data.Vector as V
 import System.IO
-import System.Environment (lookupEnv)
 import Text.Printf
 import qualified Z3.Monad as Z3
 
@@ -24,22 +27,41 @@ import qualified PoseInfo
 import qualified Hole
 
 
-setParam :: Z3.MonadZ3 m => m ()
-setParam = do
+setParam :: Z3.MonadZ3 m => Options -> m ()
+setParam opt = do
   params <- Z3.mkParams
-  threads <- Z3.mkStringSymbol "threads"
-  ths <- liftIO $ maybe (return 12) readIO =<< (lookupEnv "CUSTOM_Z3_THREADS")
-  liftIO $ putStrLn $ "solver-param threads: " ++ show ths
-  Z3.paramsSetUInt params threads ths
+  case optThreads opt of
+    Nothing -> return ()
+    Just ths -> do
+      threads <- Z3.mkStringSymbol "threads"
+      liftIO $ putStrLn $ "solver-param threads: " ++ show ths
+      Z3.paramsSetUInt params threads ths
   Z3.solverSetParams params
 
 solve :: P.Problem -> IO P.Pose
-solve prob = do
+solve = solveWith def
+
+data Options
+  = Options
+  { optThreads :: Maybe Word
+  , optZeroDislikes :: Bool
+  }
+  deriving (Eq, Show)
+
+instance Default Options where
+  def =
+    Options
+    { optThreads = Nothing
+    , optZeroDislikes = False
+    }
+
+solveWith :: Options -> P.Problem -> IO P.Pose
+solveWith opt prob = do
   hPrintf stderr "#vertices = %d\n" (length vs)
   hPrintf stderr "#edges = %d\n" (length es)
 
   Z3.evalZ3 $ do
-    setParam
+    setParam opt
 
     pointVars <- liftM V.fromList $ forM (zip [(0::Int)..] (V.toList vs)) $ \(i, _) -> do
       x <- Z3.mkIntVar =<< Z3.mkStringSymbol ("x" ++ show i)
@@ -80,6 +102,12 @@ solve prob = do
       Z3.solverAssertCnstr =<< Z3.mkLe d max_d'
 
       return (dx,dy,dx2,dy2)
+
+    when (optZeroDislikes opt) $ do
+      forM_ hole $ \(P.Point x y) -> do
+        x' <- Z3.mkIntNum x
+        y' <- Z3.mkIntNum y
+        Z3.solverAssertCnstr =<< Z3.mkOr =<< sequence [Z3.mkAnd =<< sequence [Z3.mkEq x' x2', Z3.mkEq y' y2'] | (x2',y2') <- V.toList pointVars]
 
     let loop :: Int -> Z3.Z3 (Maybe (V.Vector P.Point))
         loop !k = do
@@ -328,8 +356,8 @@ instance Show Session where
   show Lightning = "lightning-problems"
   show Main      = "problems"
 
-solveFor :: Session -> Int -> IO ()
-solveFor sess i = do
+solveFor :: Options -> Session -> Int -> IO ()
+solveFor opt sess i = do
   hPutStrLn stderr "==================================="
   let fname = printf "data/%s/%03d.json" (show sess) i
   hPutStrLn stderr fname
@@ -339,7 +367,7 @@ solveFor sess i = do
       vs = V.fromList vs'
       eps = P.epsilon prob
 
-  pose@P.Pose{ P.pose'vertices = ps } <- solve prob
+  pose@P.Pose{ P.pose'vertices = ps } <- solveWith opt prob
   JSON.encodeFile (printf "sol%03d.json" i) pose
 
   let hole = P.hole prob
@@ -357,4 +385,4 @@ solveFor sess i = do
       hPrintf stderr "But %d is not in [%d, %d]\n" d min_d max_d
 
 test :: IO ()
-test = forM_ [(1::Int)..59] (solveFor Lightning)
+test = forM_ [(1::Int)..59] (solveFor def Lightning)

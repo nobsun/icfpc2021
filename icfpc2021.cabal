@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.2.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 
@@ -33,6 +33,16 @@ flag gui
   manual: True
   default: False
 
+flag solver-mip
+  description: enable Solver.MIP module which requires MIP package
+  manual: True
+  default: False
+
+flag solver-sat
+  description: enable Solver.SAT module which requires toysolver package
+  manual: True
+  default: False
+
 flag static
   description: build statically linked binaries
   manual: True
@@ -50,6 +60,8 @@ library
       Score
       Segment
       Solver.BackTracking
+      Solver.MIP
+      Solver.SAT
       Solver.SMT
       SubmitQueue
       TwoDim
@@ -64,17 +76,27 @@ library
     , base >=4.7 && <5
     , bytestring
     , containers
+    , data-default-class
     , directory
     , fgl
     , filepath
     , mtl
     , process
+    , scientific
     , time
     , transformers
     , unicode-show
     , utf8-string
     , vector
     , z3
+  if flag(solver-sat)
+    cpp-options: -DENABLE_SOLVER_SAT
+    build-depends:
+        toysolver ==0.7.0
+  if flag(solver-mip)
+    cpp-options: -DENABLE_SOLVER_MIP
+    build-depends:
+        MIP >=0.1.1 && <0.2
   default-language: Haskell2010
 
 executable bonusdeps
@@ -190,6 +212,7 @@ executable solver-smt
     , bytestring
     , filepath
     , icfpc2021
+    , optparse-applicative
   default-language: Haskell2010
 
 executable submit
