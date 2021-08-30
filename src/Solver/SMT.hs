@@ -45,6 +45,7 @@ data Options
   = Options
   { optThreads :: Maybe Word
   , optZeroDislikes :: Bool
+  , optGetBonus :: [Int]
   }
   deriving (Eq, Show)
 
@@ -53,6 +54,7 @@ instance Default Options where
     Options
     { optThreads = Nothing
     , optZeroDislikes = False
+    , optGetBonus = []
     }
 
 solveWith :: Options -> P.Problem -> IO P.Pose
@@ -108,6 +110,12 @@ solveWith opt prob = do
         x' <- Z3.mkIntNum x
         y' <- Z3.mkIntNum y
         Z3.solverAssertCnstr =<< Z3.mkOr =<< sequence [Z3.mkAnd =<< sequence [Z3.mkEq x' x2', Z3.mkEq y' y2'] | (x2',y2') <- V.toList pointVars]
+
+    forM_ (optGetBonus opt) $ \i -> do
+      let P.Point x y = P.position $ fromMaybe [] (P.bonuses prob) !! i
+      x' <- Z3.mkIntNum x
+      y' <- Z3.mkIntNum y
+      Z3.solverAssertCnstr =<< Z3.mkOr =<< sequence [Z3.mkAnd =<< sequence [Z3.mkEq x' x2', Z3.mkEq y' y2'] | (x2',y2') <- V.toList pointVars]
 
     let loop :: Int -> Z3.Z3 (Maybe (V.Vector P.Point))
         loop !k = do

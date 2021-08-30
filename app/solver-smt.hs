@@ -17,7 +17,7 @@ optionsParser :: Parser Options
 optionsParser = Options <$> solver <*> problemNumber
   where
     solver :: Parser Solver.Options
-    solver = Solver.Options <$> threads <*> zeroDislikes
+    solver = Solver.Options <$> threads <*> zeroDislikes <*> getBonus
     
     threads :: Parser (Maybe Word)
     threads = optional $ option auto $ mconcat
@@ -26,6 +26,10 @@ optionsParser = Options <$> solver <*> problemNumber
     zeroDislikes :: Parser Bool
     zeroDislikes = switch $ mconcat
       [long "zero-dislikes", help "find a solution with dislikes=0"]
+
+    getBonus :: Parser [Int]
+    getBonus = many $ option auto $ mconcat
+      [long "get-bonus", metavar "NUM", help "get i-th bonuses (can be used multiple times)"]
 
     problemNumber :: Parser Int
     problemNumber = argument auto $ mconcat
