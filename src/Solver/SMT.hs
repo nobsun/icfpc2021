@@ -10,6 +10,7 @@ module Solver.SMT
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.Trans.Maybe
 import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.Default.Class
@@ -117,6 +118,40 @@ solveWith opt prob = do
       y' <- Z3.mkIntNum y
       Z3.solverAssertCnstr =<< Z3.mkOr =<< sequence [Z3.mkAnd =<< sequence [Z3.mkEq x' x2', Z3.mkEq y' y2'] | (x2',y2') <- V.toList pointVars]
 
+    let findViolatingLazyConstraints :: Z3.Model -> V.Vector P.Point -> Z3.Z3 (Maybe [Z3.AST])
+        findViolatingLazyConstraints model sol = runMaybeT $ msum $
+          [ do constrs <- lift $ liftM concat $ forM (zip [(0::Int)..] es) $ \(i, _) -> do
+                 let (dx', dy', dx2', dy2') = edgeVars V.! i
+                 liftM catMaybes $ sequence
+                   [ encodeIsSquareBlocking model dx' dx2'
+                   , encodeIsSquareBlocking model dy' dy2'
+                   ]
+               guard $ not $ null constrs
+               return constrs
+
+          , do constrs <- lift $ liftM catMaybes $ forM es $ \(P.Edge s t) -> do
+                 let p1@(P.Point x1 y1) = sol V.! s
+                     p2@(P.Point x2 y2) = sol V.! t
+                     rs1 = catMaybes [findIntersectionRatio (p1,p2) (p3,p4) | (p3, p4) <- zip hole (tail hole ++ [head hole]), intersect' (p1,p2) (p3,p4)]
+                     rs2 = Set.fromList $ [0, 1] ++ rs1
+                     rs3 = Set.toList $ Set.union rs2 (Set.fromList (zipWith (\r1 r2 -> (r1 + r2) / 2) (Set.toList rs2) (tail (Set.toList rs2))))
+                 case listToMaybe [(r, p) | r <- rs3, let p = mix r (x1,y1) (x2,y2), not (isInsideHole p hole)] of
+                   Nothing -> return Nothing
+                   Just (r, p) -> do
+                     let (x1', y1') = pointVars V.! s
+                         (x2', y2') = pointVars V.! t
+                     x1'' <- Z3.mkInt2Real x1'
+                     y1'' <- Z3.mkInt2Real y1'
+                     x2'' <- Z3.mkInt2Real x2'
+                     y2'' <- Z3.mkInt2Real y2'
+                     (x'', y'') <- mix' r (x1'', y1'') (x2'', y2'')
+                     liftIO $ print (P.Edge s t, p1, p2, p, r)
+                     c <- encodeIsInside (x'', y'') hole
+                     return $ Just c
+               guard $ not $ null constrs
+               return constrs
+          ]
+
     let loop :: Int -> Z3.Z3 (Maybe (V.Vector P.Point))
         loop !k = do
           liftIO $ hPrintf stderr "Solving (%d) ..\n" k
@@ -139,41 +174,12 @@ solveWith opt prob = do
               PoseInfo.reportPoseInfo info
               hFlush stdout
 
-            constrs <- liftM concat $ forM (zip [(0::Int)..] es) $ \(i, _) -> do
-              let (dx', dy', dx2', dy2') = edgeVars V.! i
-              liftM catMaybes $ sequence
-                [ encodeIsSquareBlocking model dx' dx2'
-                , encodeIsSquareBlocking model dy' dy2'
-                ]
-
-            case constrs of
-              (_ : _) -> do
+            constrsMaybe <- findViolatingLazyConstraints model sol
+            case constrsMaybe of
+              Nothing -> return $ Just sol
+              Just constrs -> do
                 mapM_ Z3.solverAssertCnstr constrs
                 loop (k+1)
-              [] -> do
-                actions2 <- liftM concat $ forM es $ \(P.Edge s t) -> do
-                  let p1@(P.Point x1 y1) = sol V.! s
-                      p2@(P.Point x2 y2) = sol V.! t
-                      rs1 = catMaybes [findIntersectionRatio (p1,p2) (p3,p4) | (p3, p4) <- zip hole (tail hole ++ [head hole]), intersect' (p1,p2) (p3,p4)]
-                      rs2 = Set.fromList $ [0, 1] ++ rs1
-                      rs3 = Set.toList $ Set.union rs2 (Set.fromList (zipWith (\r1 r2 -> (r1 + r2) / 2) (Set.toList rs2) (tail (Set.toList rs2))))
-                  case listToMaybe [(r, p) | r <- rs3, let p = mix r (x1,y1) (x2,y2), not (isInsideHole p hole)] of
-                    Nothing -> return []
-                    Just (r, p) -> do
-                      let (x1', y1') = pointVars V.! s
-                          (x2', y2') = pointVars V.! t
-                      x1'' <- Z3.mkInt2Real x1'
-                      y1'' <- Z3.mkInt2Real y1'
-                      x2'' <- Z3.mkInt2Real x2'
-                      y2'' <- Z3.mkInt2Real y2'
-                      (x'', y'') <- mix' r (x1'', y1'') (x2'', y2'')
-                      return [liftIO (print (P.Edge s t, p1, p2, p, r)) >> assertIsInside (x'', y'') hole]
-
-                case actions2 of
-                  (_ : _) -> do
-                    sequence_ actions2
-                    loop (k+1)
-                  [] -> return $ Just sol
 
     ret <- loop 1
     case ret of
@@ -225,7 +231,11 @@ encodeIsSquareBlocking model x x2 = do
 
 
 assertIsInside :: (Z3.AST, Z3.AST) -> P.Hole -> Z3.Z3 ()
-assertIsInside (x', y') hole = do
+assertIsInside point hole = Z3.solverAssertCnstr =<< encodeIsInside point hole
+
+
+encodeIsInside :: (Z3.AST, Z3.AST) -> P.Hole -> Z3.Z3 Z3.AST
+encodeIsInside (x', y') hole = do
   isOn <- forM (zip hole (tail hole ++ [head hole])) $ \(P.Point x1 y1, P.Point x2 y2) -> do
     x1' <- Z3.mkIntNum x1
     y1' <- Z3.mkIntNum y1
@@ -272,7 +282,7 @@ assertIsInside (x', y') hole = do
       false <- Z3.mkFalse
       foldM Z3.mkXor false cps
 
-  Z3.solverAssertCnstr =<< Z3.mkOr (isOn ++ [condCP])
+  Z3.mkOr (isOn ++ [condCP])
 
 
 distance :: P.Point -> P.Point -> Int
