@@ -1,6 +1,7 @@
 
 import qualified Solver.SMT as Solver
 
+import Data.Char
 import Options.Applicative
 import System.IO
  (BufferMode(LineBuffering), hSetBuffering, stderr, stdout)
@@ -17,7 +18,7 @@ optionsParser :: Parser Options
 optionsParser = Options <$> solver <*> problemNumber
   where
     solver :: Parser Solver.Options
-    solver = Solver.Options <$> threads <*> zeroDislikes <*> getBonus
+    solver = Solver.Options <$> threads <*> zeroDislikes <*> getBonus <*> optimize
     
     threads :: Parser (Maybe Word)
     threads = optional $ option auto $ mconcat
@@ -30,6 +31,15 @@ optionsParser = Options <$> solver <*> problemNumber
     getBonus :: Parser [Int]
     getBonus = many $ option auto $ mconcat
       [long "get-bonus", metavar "NUM", help "get i-th bonuses (can be used multiple times)"]
+
+    optimize :: Parser (Maybe Solver.OptimizationMethod)
+    optimize = optional $ option (maybeReader f) $ mconcat
+      [long "optimize", metavar "STR", help "optimize solution using a specified method: linear"]
+      where
+        f s =
+          case map toLower s of
+            "linear" -> Just Solver.OptLinearSearch
+            _ -> Nothing
 
     problemNumber :: Parser Int
     problemNumber = argument auto $ mconcat

@@ -3,6 +3,7 @@ module Solver.SMT
   ( solve
   , solveWith
   , Options (..)
+  , OptimizationMethod (..)
 
   , solveFor, Session (..)
   , test
@@ -48,6 +49,7 @@ data Options
   { optThreads :: Maybe Word
   , optZeroDislikes :: Bool
   , optGetBonus :: [Int]
+  , optOptimizationMethod :: Maybe OptimizationMethod
   }
   deriving (Eq, Show)
 
@@ -57,7 +59,12 @@ instance Default Options where
     { optThreads = Nothing
     , optZeroDislikes = False
     , optGetBonus = []
+    , optOptimizationMethod = Nothing
     }
+
+data OptimizationMethod
+  = OptLinearSearch
+  deriving (Eq, Ord, Show)
 
 solveWith :: Options -> P.Problem -> IO P.Pose
 solveWith opt prob = do
@@ -185,10 +192,45 @@ solveWith opt prob = do
                     mapM_ Z3.solverAssertCnstr constrs
                     loop (k+1)
 
-    ret <- findSolution
-    case ret of
+    let defineDislikeExpr = do
+          ds <- forM (zip [(0::Int)..] hole) $ \(i, P.Point x y) -> do
+            nearest_x <- Z3.mkIntVar =<< Z3.mkStringSymbol ("n" ++ show i ++ "x")
+            nearest_y <- Z3.mkIntVar =<< Z3.mkStringSymbol ("n" ++ show i ++ "y")
+            Z3.solverAssertCnstr =<< Z3.mkOr =<< sequence [Z3.mkAnd =<< sequence [Z3.mkEq nearest_x x2', Z3.mkEq nearest_y y2'] | (x2',y2') <- V.toList pointVars]
+            x' <- Z3.mkIntNum x
+            y' <- Z3.mkIntNum y
+            nearest_dx <- Z3.mkSub [nearest_x, x']
+            nearest_dy <- Z3.mkSub [nearest_y, y']
+            nearest_dx2 <- Z3.mkIntVar =<< Z3.mkStringSymbol ("n" ++ show i ++ "dx2")
+            nearest_dy2 <- Z3.mkIntVar =<< Z3.mkStringSymbol ("n" ++ show i ++ "dy2")
+            zero <- Z3.mkIntNum (0 :: Int)
+            Z3.solverAssertCnstr =<< Z3.mkGe nearest_dx2 zero
+            Z3.solverAssertCnstr =<< Z3.mkGe nearest_dy2 zero
+            liftIO $ modifyIORef squareRelRef (\rel -> (nearest_dx, nearest_dx2) : (nearest_dy, nearest_dy2) : rel)
+            Z3.mkAdd [nearest_dx2, nearest_dy2]
+          Z3.mkAdd ds
+
+    ret0 <- findSolution
+    case ret0 of
       Nothing -> error "should not happen"
-      Just sol -> return $ P.Pose Nothing (V.toList sol)
+      Just sol0 ->
+        case optOptimizationMethod opt of
+          Nothing -> return $ P.Pose Nothing (V.toList sol0)
+          Just OptLinearSearch -> do
+            dislikeExpr <- defineDislikeExpr
+            let loop sol = do
+                  let pose = P.Pose Nothing (V.toList sol)
+                      lb = 0
+                      ub = PoseInfo.dislike hole pose - 1
+                  if ub < lb then
+                    return pose
+                  else do
+                    Z3.solverAssertCnstr =<< Z3.mkLe dislikeExpr =<< Z3.mkIntNum ub
+                    ret <- findSolution
+                    case ret of
+                      Nothing -> return pose
+                      Just sol' -> loop sol'
+            loop sol0
 
   where
     hole = P.hole prob
