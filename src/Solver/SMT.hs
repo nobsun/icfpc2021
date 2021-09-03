@@ -153,36 +153,39 @@ solveWith opt prob = do
                return constrs
           ]
 
-    let loop :: Int -> Z3.Z3 (Maybe (V.Vector P.Point))
-        loop !k = do
-          liftIO $ hPrintf stderr "Solving (%d) ..\n" k
-          ret <- Z3.solverCheck
-          liftIO $ print ret
-          if ret /= Z3.Sat then do
-            return Nothing
-          else do
-            model <- Z3.solverGetModel
-            sol <- V.forM pointVars $ \(x',y') -> do
-              Just x <- Z3.evalInt model x'
-              Just y <- Z3.evalInt model y'
-              return $ P.Point (fromIntegral x) (fromIntegral y)
+    let findSolution :: Z3.Z3 (Maybe (V.Vector P.Point))
+        findSolution = loop 1
+          where
+            loop :: Int -> Z3.Z3 (Maybe (V.Vector P.Point))
+            loop !k = do
+              liftIO $ hPrintf stderr "Solving (%d) ..\n" k
+              ret <- Z3.solverCheck
+              liftIO $ print ret
+              if ret /= Z3.Sat then do
+                return Nothing
+              else do
+                model <- Z3.solverGetModel
+                sol <- V.forM pointVars $ \(x',y') -> do
+                  Just x <- Z3.evalInt model x'
+                  Just y <- Z3.evalInt model y'
+                  return $ P.Point (fromIntegral x) (fromIntegral y)
 
-            let pose = P.Pose Nothing (V.toList sol)
-                info = PoseInfo.verifyPose prob pose
-            liftIO $ do
-              hFlush stderr
-              BL.putStrLn $ JSON.encode pose
-              PoseInfo.reportPoseInfo info
-              hFlush stdout
+                let pose = P.Pose Nothing (V.toList sol)
+                    info = PoseInfo.verifyPose prob pose
+                liftIO $ do
+                  hFlush stderr
+                  BL.putStrLn $ JSON.encode pose
+                  PoseInfo.reportPoseInfo info
+                  hFlush stdout
 
-            constrsMaybe <- findViolatingLazyConstraints model sol
-            case constrsMaybe of
-              Nothing -> return $ Just sol
-              Just constrs -> do
-                mapM_ Z3.solverAssertCnstr constrs
-                loop (k+1)
+                constrsMaybe <- findViolatingLazyConstraints model sol
+                case constrsMaybe of
+                  Nothing -> return $ Just sol
+                  Just constrs -> do
+                    mapM_ Z3.solverAssertCnstr constrs
+                    loop (k+1)
 
-    ret <- loop 1
+    ret <- findSolution
     case ret of
       Nothing -> error "should not happen"
       Just sol -> return $ P.Pose Nothing (V.toList sol)
