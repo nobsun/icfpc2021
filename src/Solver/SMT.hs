@@ -211,14 +211,12 @@ encodeIsSquareBlocking model x x2 = do
   case compare (v*v) v2 of
     EQ -> return Nothing
     LT -> do
-      liftIO $ putStrLn "A"
       pre1 <- Z3.mkLe x =<< Z3.mkIntNum (abs v)
       pre2 <- Z3.mkGe x =<< Z3.mkIntNum (- abs v)
       pre <- Z3.mkAnd [pre1, pre2]
       post <- Z3.mkLe x2 =<< Z3.mkIntNum (v * v)
       liftM Just $ Z3.mkImplies pre post
     GT -> do
-      liftIO $ putStrLn "B"
       pre1 <- Z3.mkGe x =<< Z3.mkIntNum (abs v)
       pre2 <- Z3.mkLe x =<< Z3.mkIntNum (- abs v)
       pre <- Z3.mkOr [pre1, pre2]
