@@ -14,6 +14,7 @@ import Control.Monad.Trans.Maybe
 import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.Default.Class
+import Data.IORef
 import Data.Maybe
 import Data.Monoid
 import Data.Ratio
@@ -66,6 +67,8 @@ solveWith opt prob = do
   Z3.evalZ3 $ do
     setParam opt
 
+    squareRelRef <- liftIO $ newIORef []
+
     pointVars <- liftM V.fromList $ forM (zip [(0::Int)..] (V.toList vs)) $ \(i, _) -> do
       x <- Z3.mkIntVar =<< Z3.mkStringSymbol ("x" ++ show i)
       y <- Z3.mkIntVar =<< Z3.mkStringSymbol ("y" ++ show i)
@@ -74,7 +77,7 @@ solveWith opt prob = do
       assertIsInside (x',y') hole
       return (x,y)
 
-    edgeVars <- liftM V.fromList $ forM (zip [(0::Int)..] es) $ \(i, P.Edge s t) -> do
+    _edgeVars <- liftM V.fromList $ forM (zip [(0::Int)..] es) $ \(i, P.Edge s t) -> do
       let orig_d = distance (vs V.! s) (vs V.! t)
       let min_d = orig_d + ceiling (- fromIntegral orig_d * fromIntegral eps / 1000000 :: Rational)
       let max_d = orig_d + floor (fromIntegral orig_d * fromIntegral eps / 1000000 :: Rational)
@@ -104,6 +107,8 @@ solveWith opt prob = do
       Z3.solverAssertCnstr =<< Z3.mkLe min_d' d
       Z3.solverAssertCnstr =<< Z3.mkLe d max_d'
 
+      liftIO $ modifyIORef squareRelRef (\rel -> (dx,dx2) : (dy,dy2) : rel)
+
       return (dx,dy,dx2,dy2)
 
     when (optZeroDislikes opt) $ do
@@ -120,12 +125,8 @@ solveWith opt prob = do
 
     let findViolatingLazyConstraints :: Z3.Model -> V.Vector P.Point -> Z3.Z3 (Maybe [Z3.AST])
         findViolatingLazyConstraints model sol = runMaybeT $ msum $
-          [ do constrs <- lift $ liftM concat $ forM (zip [(0::Int)..] es) $ \(i, _) -> do
-                 let (dx', dy', dx2', dy2') = edgeVars V.! i
-                 liftM catMaybes $ sequence
-                   [ encodeIsSquareBlocking model dx' dx2'
-                   , encodeIsSquareBlocking model dy' dy2'
-                   ]
+          [ do rel <- liftIO $ readIORef squareRelRef
+               constrs <- lift $ liftM catMaybes $ forM rel $ \(x, x2) -> encodeIsSquareBlocking model x x2
                guard $ not $ null constrs
                return constrs
 
