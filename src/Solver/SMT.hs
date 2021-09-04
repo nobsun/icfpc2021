@@ -199,8 +199,15 @@ solveWith opt prob = do
 
 assertIsSquare :: Z3.AST -> Z3.AST -> Int -> Z3.Z3 ()
 assertIsSquare x x2 lim = do
-  zero <- Z3.mkIntNum (0 :: Int)
-  Z3.solverAssertCnstr =<< Z3.mkGe x2 zero
+  -- x2 ≥ x² represented using tangent cuts
+  forM_ [-lim..lim] $ \n -> do
+    -- x2 - n^2 >= slope (x - n)
+    slope <- Z3.mkIntNum (2 * n)
+    lhs <- Z3.mkSub =<< sequence [pure x2, Z3.mkIntNum (n*n)]
+    rhs <- Z3.mkMul =<< sequence [pure slope, Z3.mkSub =<< sequence [pure x, Z3.mkIntNum n]]
+    Z3.solverAssertCnstr =<< Z3.mkGe lhs rhs
+
+  -- x2 ≤ x²
   Z3.solverAssertCnstr =<< Z3.mkLe x2 =<< Z3.mkIntNum (lim*lim)
   forM_ [0..lim] $ \n -> do
     lb <- Z3.mkIntNum (- n)
@@ -208,9 +215,6 @@ assertIsSquare x x2 lim = do
     pre1 <- Z3.mkAnd =<< sequence [Z3.mkLe lb x, Z3.mkLe x ub]
     post1 <- Z3.mkLe x2 =<< Z3.mkIntNum (n*n)
     Z3.solverAssertCnstr =<< Z3.mkImplies pre1 post1
-    pre2 <- Z3.mkOr =<< sequence [Z3.mkGe lb x, Z3.mkGe x ub]
-    post2 <- Z3.mkGe x2 =<< Z3.mkIntNum (n*n)
-    Z3.solverAssertCnstr =<< Z3.mkImplies pre2 post2
 
 
 -- x2 が x の二乗でない場合に、その反例をブロックする制約条件を返す
@@ -227,11 +231,12 @@ encodeIsSquareBlocking model x x2 = do
       post <- Z3.mkLe x2 =<< Z3.mkIntNum (v * v)
       liftM Just $ Z3.mkImplies pre post
     GT -> do
-      pre1 <- Z3.mkGe x =<< Z3.mkIntNum (abs v)
-      pre2 <- Z3.mkLe x =<< Z3.mkIntNum (- abs v)
-      pre <- Z3.mkOr [pre1, pre2]
-      post <- Z3.mkGe x2 =<< Z3.mkIntNum (v * v)
-      liftM Just $ Z3.mkImplies pre post
+      -- x2 ≥ x² represented using tangent cuts
+      -- x2 - v^2 >= slope (x - v)
+      slope <- Z3.mkIntNum (2 * v)
+      lhs <- Z3.mkSub =<< sequence [pure x2, Z3.mkIntNum (v*v)]
+      rhs <- Z3.mkMul =<< sequence [pure slope, Z3.mkSub =<< sequence [pure x, Z3.mkIntNum v]]
+      liftM Just $ Z3.mkGe lhs rhs
 
 
 assertIsInside :: (Z3.AST, Z3.AST) -> P.Hole -> Z3.Z3 ()
