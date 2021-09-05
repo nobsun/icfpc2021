@@ -75,6 +75,7 @@ solveWith opt prob = do
     setParam opt
 
     squareRelRef <- liftIO $ newIORef []
+    squareLBRelRef <- liftIO $ newIORef []
 
     pointVars <- liftM V.fromList $ forM (zip [(0::Int)..] (V.toList vs)) $ \(i, _) -> do
       x <- Z3.mkIntVar =<< Z3.mkStringSymbol ("x" ++ show i)
@@ -134,6 +135,20 @@ solveWith opt prob = do
         findViolatingLazyConstraints model sol = runMaybeT $ msum $
           [ do rel <- liftIO $ readIORef squareRelRef
                constrs <- lift $ liftM catMaybes $ forM rel $ \(x, x2) -> encodeIsSquareBlocking model x x2
+               guard $ not $ null constrs
+               return constrs
+
+          , do rel <- liftIO $ readIORef squareLBRelRef
+               constrs <- lift $ liftM catMaybes $ forM rel $ \(x, x2) -> do
+                 Just v <- Z3.evalInt model x
+                 Just v2 <- Z3.evalInt model x2
+                 if v*v <= v2 then
+                   return Nothing
+                 else do
+                   slope <- Z3.mkIntNum (2 * v)
+                   lhs <- Z3.mkSub =<< sequence [pure x2, Z3.mkIntNum (v*v)]
+                   rhs <- Z3.mkMul =<< sequence [pure slope, Z3.mkSub =<< sequence [pure x, Z3.mkIntNum v]]
+                   liftM Just $ Z3.mkGe lhs rhs
                guard $ not $ null constrs
                return constrs
 
@@ -203,11 +218,20 @@ solveWith opt prob = do
             nearest_dy <- Z3.mkSub [nearest_y, y']
             nearest_dx2 <- Z3.mkIntVar =<< Z3.mkStringSymbol ("n" ++ show i ++ "dx2")
             nearest_dy2 <- Z3.mkIntVar =<< Z3.mkStringSymbol ("n" ++ show i ++ "dy2")
-            zero <- Z3.mkIntNum (0 :: Int)
-            Z3.solverAssertCnstr =<< Z3.mkGe nearest_dx2 zero
-            Z3.solverAssertCnstr =<< Z3.mkGe nearest_dy2 zero
-            liftIO $ modifyIORef squareRelRef (\rel -> (nearest_dx, nearest_dx2) : (nearest_dy, nearest_dy2) : rel)
+
+            let f x x2 = do
+                  -- 制約を完全にlazyに追加するよりは最低限は先に追加しておいた方が良さそう
+                  forM_ [(-2::Int)..2] $ \v -> do
+                    slope <- Z3.mkIntNum (2 * v)
+                    lhs <- Z3.mkSub =<< sequence [pure x2, Z3.mkIntNum (v*v)]
+                    rhs <- Z3.mkMul =<< sequence [pure slope, Z3.mkSub =<< sequence [pure x, Z3.mkIntNum v]]
+                    liftM Just $ Z3.mkGe lhs rhs
+                  liftIO $ modifyIORef squareLBRelRef (\rel -> (x, x2) : rel)
+            f nearest_dx nearest_dx2
+            f nearest_dy nearest_dy2
+
             Z3.mkAdd [nearest_dx2, nearest_dy2]
+
           Z3.mkAdd ds
 
     ret0 <- findSolution
